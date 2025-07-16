@@ -27,10 +27,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_-tp*9^e2m4r^hrmo7&dcplk8v^=!$1)l0ops1^6+&&y3g438*'
+SECRET_KEY = os.getenv('SECRET_KEY','django-insecure-_-tp*9^e2m4r^hrmo7&dcplk8v^=!$1)l0ops1^6+&&y3g438*')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = OS.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-     'django.contrib.postgres',
+    'django.contrib.postgres',
     'drf_yasg',
     # 'drf_spectacular_sidecar',
     'drf_spectacular',
@@ -56,9 +56,14 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    
     'django.middleware.common.CommonMiddleware',
+    
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -90,17 +95,24 @@ WSGI_APPLICATION = 'WhatApi.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 
+DATABASE_URL = os.getenv('RENDER_DATABASE_URL', None)
 
-DATABASES = {
-    'default': {
-        'ENGINE': os.getenv('DATABASE_ENGINE', None),
-        'NAME': os.getenv('DATABASE_NAME', None),
-        'USER': os.getenv('DATABASE_USER', None),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD', None),
-        'HOST': os.getenv('DATABASE_HOST', None),
-        'PORT': os.getenv('DATABASE_PORT', None),
+if DATABASE_URL:
+     DATABASES ={
+        "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
+                }
+
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': os.getenv('DATABASE_ENGINE', None),
+            'NAME': os.getenv('DATABASE_NAME', None),
+            'USER': os.getenv('DATABASE_USER', None),
+            'PASSWORD': os.getenv('DATABASE_PASSWORD', None),
+            'HOST': os.getenv('DATABASE_HOST', None),
+            'PORT': os.getenv('DATABASE_PORT', None),
+        }
     }
-}
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
