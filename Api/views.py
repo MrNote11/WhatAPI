@@ -20,10 +20,12 @@ class WebhookView(APIView):
 
     def get(self, request):
         # Verify the webhook
-        if request.GET.get('hub.mode') == 'subscribe' and request.GET.get('hub.verify_token') == settings.WEBHOOK_VERIFY_TOKEN:
-            return Response({'message':request.GET.get('hub.challenge')}, status=status.HTTP_200_OK)
+        if request.GET.get('hub.mode') == 'subscribe' and request.GET.get('hub.verify_token') == "b83eb537-1571-48a1-a78e-f10283965a83":
+            challenge = request.GET.get('hub.challenge')
+            return HttpResponse(challenge, status=200)  # <- plain text response
         else:
-            return Response({'message':'Verification failed'}, status=status.HTTP_403_FORBIDDEN)
+            return HttpResponse("Verification failed", status=403)
+
 
     def post(self, request):
         # Handle incoming messages here
