@@ -95,11 +95,17 @@ WSGI_APPLICATION = 'WhatApi.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 
-DATABASE_URL = os.getenv('RENDER_DATABASE_URL', None)
+
+DATABASE_URL = True
+WHATSAPP_URL = os.getenv("WHATSAPP_URL")
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+WHATSAPP_AUTHORIZATION_BEARER = os.getenv("WHATSAPP_AUTHORIZATION_BEARER")
+WHATSAPP_CONTENT_TYPE = os.getenv("WHATSAPP_CONTENT_TYPE")
+WEBHOOK_VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN")
 
 if DATABASE_URL:
      DATABASES ={
-        "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
+        "default": dj_database_url.parse(os.environ.get('RENDER_DATABASE_URL'))
                 }
 
 else:
