@@ -1,4 +1,4 @@
-from django.shortcuts import render, HttpResponse, Response
+from django.shortcuts import render, HttpResponse
 from rest_framework.views import APIView
 from settings.conf import settings
 from rest_framework import status
@@ -30,8 +30,8 @@ class WebhookView(APIView):
         data1 = request.body
         data2 = request.data
         
-        # if "object" in data1 and "entry" in data1:
-        #     if data1["object"] == abegplswork
+        if "object" in data1 and "entry" in data1:
+            if data1["object"] == abeg work
         data_load = json.loads(data1)
         data_load1 = json.load(data2) 
         print(request.data)
