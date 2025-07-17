@@ -2,10 +2,11 @@ from django.shortcuts import render, HttpResponse, Response
 from rest_framework.views import APIView
 from settings.conf import settings
 from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 
 # Create your views here.
 class HomeView(APIView):
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
         
@@ -13,7 +14,7 @@ class HomeView(APIView):
     
     
 class WebhookView(APIView):
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
         # Verify the webhook

@@ -3,7 +3,7 @@ from . import views
 
 app_name = 'home'
 urlpatterns = [
-    path('', views.HomeView.as_view(), name='home')
+    path('', views.HomeView.as_view(), name='home'),
     path('6c8c4825-dcba-4eec-be36-9bb19da00871', views.WebhookView.as_view(), name='webhook'),
 ]
 
