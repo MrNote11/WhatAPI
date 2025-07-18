@@ -32,7 +32,7 @@ SECRET_KEY = os.getenv('SECRET_KEY','django-insecure-_-tp*9^e2m4r^hrmo7&dcplk8v^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['https://whatapi-1.onrender.com']
+ALLOWED_HOSTS = ['https://whatapi-1.onrender.com', 'whatapi-1.onrender.com', 'localhost']
 
 
 # Application definition
