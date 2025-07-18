@@ -4,7 +4,7 @@ from . import views
 app_name = 'home'
 urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
-    path('6c8c4825-dcba-4eec-be36-9bb19da00871', views.WebhookView.as_view(), name='webhook'),
+    path('6c8c4825-dcba-4eec-be36-9bb19da00871/', views.WebhookView.as_view(), name='webhook'),
 ]
 
 #6c8c4825-dcba-4eec-be36-9bb19da00871 # This is the webhook URL that you will set in your WhatsApp Business API settings.
