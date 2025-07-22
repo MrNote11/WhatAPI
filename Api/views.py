@@ -4,14 +4,17 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from twilio.rest import Client
+from django.conf import settings
 
+client = Client(account_sid=settings.SID, authToken=settings.AUTHTOKEN)
 
+message = client.messages.create(to='whatsapp:+2349126709734', from_='whatsapp:+14155238886', body='welcome to twilio')
 # Create your views here.
 class HomeView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        
         return HttpResponse('Welcome to our app message us through this number: +1 555 630 8775')
     
     
@@ -22,14 +25,19 @@ class WebhookView(APIView):
 
     def get(self, request):
         # Verifies webhook on setup from Meta Dashboard
-        verify_token = "b83eb537-1571-48a1-a78e-f10283965a83"
-        mode = request.GET.get("hub.mode")
-        token = request.GET.get("hub.verify_token")
-        challenge = request.GET.get("hub.challenge")
+        client = Client(account_sid=settings.SID, authToken=settings.AUTHTOKEN)
 
-        if mode == "subscribe" and token == verify_token:
-            return Response(data=challenge, status=status.HTTP_200_OK)
-        return Response("Verification failed", status=status.HTTP_403_FORBIDDEN)
+        message = client.messages.create(to='whatsapp:+2349126709734', from_='whatsapp:+14155238886', body='welcome to twilio')
+        
+        print(message.body)
+        # verify_token = "b83eb537-1571-48a1-a78e-f10283965a83"
+        # mode = request.GET.get("hub.mode")
+        # token = request.GET.get("hub.verify_token")
+        # challenge = request.GET.get("hub.challenge")
+
+        # if mode == "subscribe" and token == verify_token:
+            # return Response(data=challenge, status=status.HTTP_200_OK)
+        return Response({"message": message.body}, status=status.HTTP_200_OK)
 
     def post(self, request):
         # Handles incoming messages/events
