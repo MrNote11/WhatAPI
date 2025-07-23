@@ -38,17 +38,16 @@ class WhatsAppWebhookView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        # Log the incoming webhook data
+        print("WhatsApp webhook received:", request.data)
+
+        # Create Twilio XML response
         response = MessagingResponse()
         twilio_msg = "Webhook received successfully!"
         response.message(twilio_msg)
 
-        print("WhatsApp webhook received:", request.data)
-
-        return Response({
-            "body": request.data,
-            "response": twilio_msg  # ✅ Return just the message string
-        }, status=status.HTTP_200_OK)
-        
+        # Return TwiML as an XML HTTP response
+        return HttpResponse(response.to_xml(), content_type='application/xml')
         
     # def post(self, request):
     #     # Handles incoming messages/events
