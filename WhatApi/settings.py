@@ -105,11 +105,15 @@ WEBHOOK_VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN")
 SID = os.getenv("SID")
 AUTHTOKEN = os.getenv("AUTHTOKEN")
 
+import dj_database_url
+import os
+
+DATABASE_URL = os.environ.get("RENDER_DATABASE_URL")
 
 if DATABASE_URL:
-     DATABASES ={
-        "default": dj_database_url.parse(os.environ.get('RENDER_DATABASE_URL'))
-                }
+    DATABASES = {
+        "default": dj_database_url.parse(DATABASE_URL)
+    }
 
 else:
     DATABASES = {
