@@ -6,10 +6,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from twilio.rest import Client
 from django.conf import settings
-
-client = Client(account_sid=settings.SID, authToken=settings.AUTHTOKEN)
-
-message = client.messages.create(to='whatsapp:+2349126709734', from_='whatsapp:+14155238886', body='welcome to twilio')
+from twilio.twiml.messaging_response import MessagingResponse
 # Create your views here.
 class HomeView(APIView):
     permission_classes = [AllowAny]
@@ -20,29 +17,41 @@ class HomeView(APIView):
     
     
 
-class WebhookView(APIView):
+class WhatsAppMessageBodyView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        # Verifies webhook on setup from Meta Dashboard
-        client = Client(account_sid=settings.SID, authToken=settings.AUTHTOKEN)
+        account_sid = settings.SID
+        auth_token = settings.AUTHTOKEN
+        client = Client(account_sid, auth_token)
 
-        message = client.messages.create(to='whatsapp:+2349126709734', from_='whatsapp:+14155238886', body='welcome to twilio')
-        
+        message = client.messages.create(
+            to="whatsapp:+2349126709734",
+            from_="whatsapp:+14155238886",
+            body="Welcome to MyApp"
+        )
         print(message.body)
-        # verify_token = "b83eb537-1571-48a1-a78e-f10283965a83"
-        # mode = request.GET.get("hub.mode")
-        # token = request.GET.get("hub.verify_token")
-        # challenge = request.GET.get("hub.challenge")
 
-        # if mode == "subscribe" and token == verify_token:
-            # return Response(data=challenge, status=status.HTTP_200_OK)
-        return Response({"message": message.body}, status=status.HTTP_200_OK)
+        return Response({"message": message.body})
 
+
+class WhatsAppWebhookView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
-        # Handles incoming messages/events
-        print("WhatsApp webhook received:", request.data)
-        return Response(status=status.HTTP_200_OK)
+        response = MessagingResponse()
+        if response:
+            print("WhatsApp webhook received:", request.data)
+            # You can process the incoming message here
+            # For example, you can log it or send a response back
+            # response.message("Thank you for your message!")
+            return Response({"body":request.data,
+                             "response":response.message("Webhook received successfully!")
+                             },status=status.HTTP_200_OK)  
+            
+    # def post(self, request):
+    #     # Handles incoming messages/events
+    #     print("WhatsApp webhook received:", request.data)
+    #     return Response(status=status.HTTP_200_OK)
     
 # class WebhookView(APIView):
 #     permission_classes = [AllowAny]
