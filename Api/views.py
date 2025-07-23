@@ -34,20 +34,22 @@ class WhatsAppMessageBodyView(APIView):
 
         return Response({"message": message.body})
 
-
 class WhatsAppWebhookView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         response = MessagingResponse()
-        if response:
-            print("WhatsApp webhook received:", request.data)
-            # You can process the incoming message here
-            # For example, you can log it or send a response back
-            # response.message("Thank you for your message!")
-            return Response({"body":request.data,
-                             "response":response.message("Webhook received successfully!")
-                             },status=status.HTTP_200_OK)  
-            
+        twilio_msg = "Webhook received successfully!"
+        response.message(twilio_msg)
+
+        print("WhatsApp webhook received:", request.data)
+
+        return Response({
+            "body": request.data,
+            "response": twilio_msg  # ✅ Return just the message string
+        }, status=status.HTTP_200_OK)
+        
+        
     # def post(self, request):
     #     # Handles incoming messages/events
     #     print("WhatsApp webhook received:", request.data)
