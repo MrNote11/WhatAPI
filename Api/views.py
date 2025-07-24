@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from twilio.rest import Client
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 from twilio.twiml.messaging_response import MessagingResponse
 # Create your views here.
 class HomeView(APIView):
@@ -13,9 +14,7 @@ class HomeView(APIView):
 
     def get(self, request):
         return HttpResponse('Welcome to our app message us through this number: +1 555 630 8775')
-    
-    
-    
+        
 
 class WhatsAppMessageBodyView(APIView):
     permission_classes = [AllowAny]
@@ -34,6 +33,8 @@ class WhatsAppMessageBodyView(APIView):
 
         return Response({"message": message.body})
 
+
+
 class WhatsAppWebhookView(APIView):
     permission_classes = [AllowAny]
 
@@ -49,38 +50,37 @@ class WhatsAppWebhookView(APIView):
         # Return TwiML as an XML HTTP response
         return HttpResponse(response.to_xml(), content_type='application/xml')
         
-    # def post(self, request):
-    #     # Handles incoming messages/events
-    #     print("WhatsApp webhook received:", request.data)
-    #     return Response(status=status.HTTP_200_OK)
+   
+@csrf_exempt
+class FacebookWebhookView(APIView):
+    permission_classes = [AllowAny]
     
-# class WebhookView(APIView):
-#     permission_classes = [AllowAny]
-
-#     def get(self, request):
-#         # Verify the webhook
-#         if request.GET.get('hub.mode') == 'subscribe' and request.GET.get('hub.verify_token') == :
-#             challenge = request.GET.get('hub.challenge')
-#             return HttpResponse(challenge, status=200)  # <- plain text response
-#         else:
-#             return HttpResponse("Verification failed", status=403)
+    def get(self, request):
+        verify_token = settings.WEBHOOK_VERIFY_TOKEN
+        mode = request.data.get('hub.mode')
+        challenge = request.data.get('hub.challenge')
+        token = request.data.get('hub.verify_token')
+        if token == verify_token and mode == 'subscribe':
+            return Response({'message':challenge}, status=status.HTTP_200_OK)
+        return Response({'error': 'Verification failed'}, status=status.HTTP_403_FORBIDDEN)
 
 
-#     def post(self, request):
-#         # Handle incoming messages here
-#         data1 = request.body
-#         data2 = request.data
-#         data_load = json.loads(data1)
-#         data_load1 = json.load(data2) 
-#         print(f"data_load: {data_load}")
-#         print(f"data_load1: {data_load1}")
-#         data_load1 = json.load(data2) 
-#         # if "object" in data1 and "entry" in data1:
-#         #     if data1["object"] == "abeg work":
-#         #         try:
-#         #             for entry in data1["entry"]:
-#         #                 phonenumber = entry['changes'][0]['value']['metadata']['display_phone_number']
-#         #                 phonenumber = "2349126709734"
+
+    # def post(self, request):
+    #     # Handle incoming messages here
+    #     data1 = request.body
+    #     data2 = request.data
+    #     data_load = json.loads(data1)
+    #     data_load1 = json.load(data2) 
+    #     print(f"data_load: {data_load}")
+    #     print(f"data_load1: {data_load1}")
+    #     data_load1 = json.load(data2) 
+    #     # if "object" in data1 and "entry" in data1:
+    #     #     if data1["object"] == "abeg work":
+    #     #         try:
+    #     #             for entry in data1["entry"]:
+    #     #                 phonenumber = entry['changes'][0]['value']['metadata']['display_phone_number']
+    #     #                 phonenumber = "2349126709734"
         
-#         return Response({'Message received': data_load1,
-#                          'Raw data': data_load}, status=status.HTTP_200_OK)
+    #     return Response({'Message received': data_load1,
+    #                      'Raw data': data_load}, status=status.HTTP_200_OK)
