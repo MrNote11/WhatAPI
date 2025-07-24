@@ -60,9 +60,11 @@ class FacebookWebhookView(APIView):
         mode = request.data.get('hub.mode')
         challenge = request.data.get('hub.challenge')
         token = request.data.get('hub.verify_token')
+        print(f"my_setting_token: {verify_token}")
         if token == verify_token and mode == 'subscribe':
             return Response({'message':challenge}, status=status.HTTP_200_OK)
-        return Response({'error': 'Verification failed'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({'error': 'Verification failed',
+                         'data': f"meta_token: {token}"}, status=status.HTTP_403_FORBIDDEN)
 
 
 
