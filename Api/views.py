@@ -1,6 +1,7 @@
 from django.shortcuts import render, HttpResponse
 from rest_framework.views import APIView
 from django.conf import settings
+import logging
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -51,7 +52,7 @@ class WhatsAppWebhookView(APIView):
         # Return TwiML as an XML HTTP response
         return HttpResponse(response.to_xml(), content_type='application/xml')
         
-   
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class FacebookWebhookView(APIView):
@@ -63,11 +64,14 @@ class FacebookWebhookView(APIView):
         challenge = request.query_params.get('hub.challenge')
         token = request.query_params.get('hub.verify_token')
 
-        if token == verify_token and mode == 'subscribe':
+        print(f"Incoming GET: mode={mode}, token={token}, challenge={challenge}")
+        print(f"Expected token: {verify_token}")
+        logger = logging.getLogger(__name__)
+        logger.info(f"Webhook GET called with token={token}")
+        if mode == 'subscribe' and token == verify_token:
             return HttpResponse(challenge, content_type="text/plain", status=200)
 
         return HttpResponse("Verification failed", status=403)
-
     # def post(self, request):
     #     # Handle incoming messages here
     #     data1 = request.body
