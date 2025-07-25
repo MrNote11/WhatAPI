@@ -8,6 +8,7 @@ from twilio.rest import Client
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from twilio.twiml.messaging_response import MessagingResponse
+from django.utils.decorators import method_decorator
 # Create your views here.
 class HomeView(APIView):
     permission_classes = [AllowAny]
@@ -51,22 +52,21 @@ class WhatsAppWebhookView(APIView):
         return HttpResponse(response.to_xml(), content_type='application/xml')
         
    
-@csrf_exempt
+
+@method_decorator(csrf_exempt, name='dispatch')
 class FacebookWebhookView(APIView):
     permission_classes = [AllowAny]
-    
+
     def get(self, request):
         verify_token = settings.WEBHOOK_VERIFY_TOKEN
-        mode = request.data.get('hub.mode')
-        challenge = request.data.get('hub.challenge')
-        token = request.data.get('hub.verify_token')
-        print(f"my_setting_token: {verify_token}")
+        mode = request.query_params.get('hub.mode')
+        challenge = request.query_params.get('hub.challenge')
+        token = request.query_params.get('hub.verify_token')
+
         if token == verify_token and mode == 'subscribe':
-            return Response({'message':challenge}, status=status.HTTP_200_OK)
-        return Response({'error': 'Verification failed',
-                         'data': f"meta_token: {token}"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(challenge, status=200)
 
-
+        return Response("Verification failed", status=403)
 
     # def post(self, request):
     #     # Handle incoming messages here
