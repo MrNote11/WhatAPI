@@ -6,9 +6,9 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from twilio.rest import Client
 from django.conf import settings
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from twilio.twiml.messaging_response import MessagingResponse
-from django.utils.decorators import method_decorator
 # Create your views here.
 class HomeView(APIView):
     permission_classes = [AllowAny]
@@ -64,9 +64,9 @@ class FacebookWebhookView(APIView):
         token = request.query_params.get('hub.verify_token')
 
         if token == verify_token and mode == 'subscribe':
-            return Response(challenge, status=200)
+            return HttpResponse(challenge, content_type="text/plain", status=200)
 
-        return Response("Verification failed", status=403)
+        return HttpResponse("Verification failed", status=403)
 
     # def post(self, request):
     #     # Handle incoming messages here
