@@ -105,8 +105,7 @@ WEBHOOK_VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN")
 SID = os.getenv("SID")
 AUTHTOKEN = os.getenv("AUTHTOKEN")
 
-import dj_database_url
-import os
+
 
 DATABASE_URL = os.environ.get("RENDER_DATABASE_URL")
 
