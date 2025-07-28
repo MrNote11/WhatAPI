@@ -4,8 +4,8 @@ from . import views
 app_name = 'home'
 urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
-    path('send-message/', views.WhatsAppMessageBodyView.as_view(), name='send_message'),
-    path('6c8c4825-dcba-4eec-be36-9bb19da00871/', views.WhatsAppWebhookView.as_view(), name='twilio_webhook'),
+    path('send-message/', views.TwilioWhatsAppMessageBodyView.as_view(), name='send_message'),
+    path('6c8c4825-dcba-4eec-be36-9bb19da00871/', views.TwilioWhatsAppWebhookView.as_view(), name='twilio_webhook'),
     path('webhook/', views.FacebookWebhookView.as_view(), name='webhook')
 ]
 

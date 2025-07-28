@@ -18,12 +18,12 @@ class HomeView(APIView):
         return HttpResponse('Welcome to our app message us through this number: +1 555 630 8775')
         
 
-class WhatsAppMessageBodyView(APIView):
+class TwilioWhatsAppMessageBodyView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request):
-        account_sid = settings.SID
-        auth_token = settings.AUTHTOKEN
+    def post(self, request):
+        account_sid = settings.TWILIO_SID
+        auth_token = settings.TWILIO_AUTH_TOKEN
         client = Client(account_sid, auth_token)
 
         message = client.messages.create(
@@ -37,7 +37,7 @@ class WhatsAppMessageBodyView(APIView):
 
 
 
-class WhatsAppWebhookView(APIView):
+class TwilioWhatsAppWebhookView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -54,6 +54,9 @@ class WhatsAppWebhookView(APIView):
         
 
 
+
+
+@csrf_exempt
 @method_decorator(csrf_exempt, name='dispatch')
 class FacebookWebhookView(APIView):
     permission_classes = [AllowAny]
