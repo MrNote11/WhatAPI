@@ -2,6 +2,8 @@ from django.shortcuts import render, HttpResponse
 from rest_framework.views import APIView
 from django.conf import settings
 import logging
+from ..decorators.security import *
+from ..utils.sendmessage import *
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -54,27 +56,17 @@ class TwilioWhatsAppWebhookView(APIView):
         
 
 
-
-
-@csrf_exempt
-@method_decorator(csrf_exempt, name='dispatch')
 class FacebookWebhookView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        verify_token = settings.WEBHOOK_VERIFY_TOKEN
-        mode = request.query_params.get('hub.mode')
-        challenge = request.query_params.get('hub.challenge')
-        token = request.query_params.get('hub.verify_token')
+        return verify(request)
 
-        print(f"Incoming GET: mode={mode}, token={token}, challenge={challenge}")
-        print(f"Expected token: {verify_token}")
-        logger = logging.getLogger(__name__)
-        logger.info(f"Webhook GET called with token={token}")
-        if mode == 'subscribe' and token == verify_token:
-            return HttpResponse(challenge, content_type="text/plain", status=200)
+    @method_decorator(signature_required)
+    def post(self, request):
+        return handle_message(request)
 
-        return HttpResponse("Verification failed", status=403)
+
     # def post(self, request):
     #     # Handle incoming messages here
     #     data1 = request.body

@@ -3,6 +3,7 @@ import requests
 import logging
 import json
 from rest_framework.response import Response
+from django.http import JsonResponse, HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import re
@@ -26,8 +27,13 @@ def send_whatsapp_messages(data):
 
 
     response = requests.post(settings.WHATSAPP_URL, json=data, headers=headers, timeout=10)
-
-    return response.json()
+    if response.ok:
+        logging.info("WhatsApp message sent successfully.")
+        return {"status": "success", "data": response.json()}
+    else:
+        logging.error(f"Failed to send WhatsApp message: {response.status_code} - {response.text}")
+        return {"status": "error", "error": response.text, "status_code": response.status_code}
+    
 
 
 
@@ -136,29 +142,31 @@ def handle_message(request):
         logging.error(f"Error processing message: {e}")
         return Response({"status": "error", "message": "Failed to process message"}), 400
 
-
 def verify(request):
-    # Parse params from the webhook verification request
-    mode = request.POST.get("hub.mode")
-    token = request.POST.get("hub.verify_token")
-    challenge = request.POST.get("hub.challenge")
-    # Check if a token and mode were sent
+    mode = request.GET.get("hub.mode")
+    token = request.GET.get("hub.verify_token")
+    challenge = request.GET.get("hub.challenge")
+
     if mode and token:
-        # Check the mode and token sent are correct
         if mode == "subscribe" and token == settings.WEBHOOK_VERIFY_TOKEN:
-            # Respond with 200 OK and challenge token from the request
             logging.info("WEBHOOK_VERIFIED")
-            return challenge, 200
+            return HttpResponse(challenge, status=200)
         else:
-            # Responds with '403 Forbidden' if verify tokens do not match
             logging.info("VERIFICATION_FAILED")
-            return Response({"status": "error", "message": "Verification failed"}), 403
+            return JsonResponse({"status": "error", "message": "Verification failed"}, status=403)
     else:
-        # Responds with '400 Bad Request' if verify tokens do not match
         logging.info("MISSING_PARAMETER")
-        return Response({"status": "error", "message": "Missing parameters"}), 400
+        return JsonResponse({"status": "error", "message": "Missing parameters"}, status=400)
 
 phonenumber = "2349126709734"
 message = "Hello there governor, \n This our first test..."
 
-ans = send_whatsapp_messages(phonenumber, message)
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Starting WhatsApp message sender...") 
+    payload = json.loads(get_text_message_input(phonenumber, message))
+    ans = send_whatsapp_messages(payload)
+    if ans.get("status") == "success":
+        print("Message sent successfully!")
+    else:
+        print("Failed to send message:", ans.get("error", "Unknown error"))
