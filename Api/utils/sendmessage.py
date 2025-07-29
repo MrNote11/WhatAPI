@@ -129,6 +129,7 @@ def handle_message(request):
         try:
             if is_valid_whatsapp_message(body):
                 process_whatsapp_message(body)
+                return Response({"status":"message_successful"}, status=200)
             else:
                 return Response({
                     "status":"error",
