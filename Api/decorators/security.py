@@ -13,17 +13,18 @@ import hashlib
 import hmac
 
 
-def validate_signature(body, signature, app_secret):
+def validate_signature(body: bytes, signature: str, app_secret: str) -> bool:
     """
-    Validates the signature sent by Meta using your app secret.
+    Validates the request signature from Meta/Facebook using your app secret.
     """
     expected_signature = hmac.new(
         key=app_secret.encode('utf-8'),
-        msg=body.encode('utf-8'),
+        msg=body,  # ✅ Already bytes, no need to encode again
         digestmod=hashlib.sha256
     ).hexdigest()
 
     return hmac.compare_digest(expected_signature, signature)
+
 
 
 def signature_required(view_func):
