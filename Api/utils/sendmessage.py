@@ -153,6 +153,7 @@ def verify(request):
             return HttpResponse(challenge, status=200)
         else:
             logging.info("VERIFICATION_FAILED")
+            print(f"mode: {mode} - token: {token}")
             return JsonResponse({"status": "error", "message": "Verification failed"}, status=403)
     else:
         logging.info("MISSING_PARAMETER")
