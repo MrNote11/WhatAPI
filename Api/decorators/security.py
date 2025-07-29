@@ -39,7 +39,7 @@ def signature_required(view_func):
         signature = header_signature[7:]  # strip 'sha256='
         body = request.body  # Raw body bytes
 
-        if not validate_signature(body, signature, settings.WHATSAPP_APP_SECRET):
+        if not validate_signature(body, signature, settings.APP_SECRET):
             logging.warning("Signature validation failed.")
             return JsonResponse({"error": "Signature mismatch"}, status=403)
 
