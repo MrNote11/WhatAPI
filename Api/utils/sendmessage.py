@@ -154,6 +154,7 @@ def verify(request):
         else:
             logging.info("VERIFICATION_FAILED")
             print(f"mode: {mode} - token: {token}")
+            print(f"whatsapp_token: {settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN}")
             return JsonResponse({"status": "error", "message": "Verification failed"}, status=403)
     else:
         logging.info("MISSING_PARAMETER")
