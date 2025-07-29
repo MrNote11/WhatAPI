@@ -2,9 +2,9 @@ from django.shortcuts import render, HttpResponse
 from rest_framework.views import APIView
 from django.conf import settings
 import logging
-from ..decorators.security import signature_required
+from .decorators.security import signature_required
 import json
-from ..utils.sendmessage import *
+from .utils.sendmessage import *
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -13,6 +13,7 @@ from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from twilio.twiml.messaging_response import MessagingResponse
+
 # Create your views here.
 class HomeView(APIView):
     permission_classes = [AllowAny]
