@@ -6,7 +6,7 @@ urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
     path('send-message/', views.TwilioWhatsAppMessageBodyView.as_view(), name='send_message'),
     path('6c8c4825-dcba-4eec-be36-9bb19da00871/', views.TwilioWhatsAppWebhookView.as_view(), name='twilio_webhook'),
-    path('webhook', views.FacebookWebhookView.as_view(), name='webhook')
+    path('webhook/', views.FacebookWebhookView.as_view(), name='webhook')
 ]
 
 #6c8c4825-dcba-4eec-be36-9bb19da00871 # This is the webhook URL that you will set in your WhatsApp Business API settings.
