@@ -148,7 +148,7 @@ def verify(request):
     challenge = request.GET.get("hub.challenge")
 
     if mode and token:
-        if mode == "subscribe" and token == settings.WEBHOOK_VERIFY_TOKEN:
+        if mode == "subscribe" and token == settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN:
             logging.info("WEBHOOK_VERIFIED")
             return HttpResponse(challenge, status=200)
         else:
