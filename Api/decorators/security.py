@@ -13,18 +13,16 @@ import hashlib
 import hmac
 
 
-def validate_signature(payload, signature):
+def validate_signature(body, signature, app_secret):
     """
-    Validate the incoming payload's signature against our expected signature
+    Validates the signature sent by Meta using your app secret.
     """
-    # Use the App Secret to hash the payload
     expected_signature = hmac.new(
-        bytes(settings.APP_SECRET, "latin-1"),
-        msg=payload.encode("utf-8"),
-        digestmod=hashlib.sha256,
+        key=app_secret.encode('utf-8'),
+        msg=body.encode('utf-8'),
+        digestmod=hashlib.sha256
     ).hexdigest()
 
-    # Check if the signature matches
     return hmac.compare_digest(expected_signature, signature)
 
 
@@ -46,3 +44,4 @@ def signature_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
+
