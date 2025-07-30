@@ -4,14 +4,24 @@ from dotenv import load_dotenv
 import os
 import time
 
+
 load_dotenv()
 OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
+EXA = os.getenv("EXA")
+exa = EXA
+results = exa.search_and_contents(
+    "Latest research in LLMs", 
+    text=True
+)
+
 client = OpenAI(api_key=OPEN_AI_API_KEY)
 
 
 # --------------------------------------------------------------
 # Upload file
 # --------------------------------------------------------------
+
+
 def upload_file(path):
     # Upload a file with an "assistants" purpose
     file = client.files.create(file=open(path, "rb"), purpose="assistants")

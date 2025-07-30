@@ -26,7 +26,6 @@ def validate_signature(body: bytes, signature: str, app_secret: str) -> bool:
     return hmac.compare_digest(expected_signature, signature)
 
 
-
 def signature_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
@@ -36,7 +35,7 @@ def signature_required(view_func):
             return JsonResponse({"error": "Invalid signature"}, status=403)
 
         signature = header_signature[7:]  # strip 'sha256='
-        body = request.body  # Raw body bytes
+        body = request.body  # Raw body bytes 
 
         if not validate_signature(body, signature, settings.APP_SECRET):
             logging.warning("Signature validation failed.")

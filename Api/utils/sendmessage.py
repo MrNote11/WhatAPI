@@ -7,7 +7,7 @@ from django.http import JsonResponse, HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import re
-
+from Api.service.openai_service import *
 
 def send_whatsapp_messages(data):
     headers = {"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}",
@@ -55,9 +55,9 @@ def get_text_message_input(recipient, text):
 
 
 
-def generate_response(response):
-    # Return text in uppercase
-    return response.upper()
+# def generate_response(response):
+#     # Return text in uppercase
+#     return response.upper()
 
 
 def process_text_for_whatsapp(text):
@@ -86,14 +86,13 @@ def process_whatsapp_message(body):
     message_body = message["text"]["body"]
 
     # TODO: implement custom function here
-    response = generate_response(message_body)
-
-    # OpenAI Integration
-    # response = generate_response(message_body, wa_id, name)
-    # response = process_text_for_whatsapp(response)
+    response = generate_response(message_body, wa_id, name)
+    response = process_text_for_whatsapp(response)
 
     data = get_text_message_input(settings.WHATSAPP_RECIPIENT_NUMBER_ID, response)
     send_whatsapp_messages(data)
+    
+
 
 
 def is_valid_whatsapp_message(body):
