@@ -9,7 +9,12 @@ load_dotenv()
 
 
 EXA = os.getenv("EXA")
-exa = EXA
+from exa_py import Exa
+
+EXA_API_KEY = os.getenv("EXA")  # this should be your actual API key
+exa = Exa(api_key=EXA_API_KEY)  # create an instance of the client
+
+
 
 
 # --------------------------------------------------------------

@@ -139,7 +139,7 @@ def handle_message(request):
                              "message":"Invalid Json provided"})
     except Exception as e:
         logging.error(f"Error processing message: {e}")
-        return Response({"status": "error", "message": "Failed to process message"}), 400
+        return Response({"status": "error", "message": "Failed to process message"}, status=400)
 
 def verify(request):
     mode = request.GET.get("hub.mode")
