@@ -15,8 +15,6 @@ EXA_API_KEY = os.getenv("EXA")  # this should be your actual API key
 exa = Exa(api_key=EXA_API_KEY)  # create an instance of the client
 
 
-
-
 # --------------------------------------------------------------
 
 def run_exa_search(message_body):
