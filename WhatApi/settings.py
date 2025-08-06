@@ -110,6 +110,10 @@ APP_SECRET = os.getenv("APP_SECRET")
 APP_ID = os.getenv("APP_ID")
 
 
+SESSION_COOKIE_AGE = 600  # seconds (10 minutes)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+
 DATABASE_URL = os.environ.get("RENDER_DATABASE_URL")
 
 if DATABASE_URL:

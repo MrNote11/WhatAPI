@@ -50,30 +50,30 @@ def store_thread(wa_id, query):
 
 # -- Response generation using Exa.ai ---------------------------------------
 
-def generate_response(message_body, wa_id, name):
-    """
-    Instead of using OpenAI Assistants, we query Exa for search results
-    and build a text response.
-    """
-    previous_query = check_if_thread_exists(wa_id)
+# def generate_response(message_body, wa_id, name):
+#     """
+#     Instead of using OpenAI Assistants, we query Exa for search results
+#     and build a text response.
+#     """
+#     previous_query = check_if_thread_exists(wa_id)
 
-    # You can enhance this by combining old + new queries
-    logging.info(f"Generating Exa.ai response for {name} ({wa_id})")
+#     # You can enhance this by combining old + new queries
+#     logging.info(f"Generating Exa.ai response for {name} ({wa_id})")
 
-    # Run search via Exa
-    results = exa.search_and_contents(message_body, text=True)
+#     # Run search via Exa
+#     results = exa.search_and_contents(message_body, text=True)
 
-    # Save the message body as the current thread for that wa_id
-    store_thread(wa_id, message_body)
+#     # Save the message body as the current thread for that wa_id
+#     store_thread(wa_id, message_body)
 
-    # Build a human-friendly response from top result
-    if results and results.results:
-        top = results.results[0]
-        title = top.title
-        content = top.text[:500]  # limit to 500 chars
-        url = top.url
-        return f"🧠 Here's something I found:\n\n🔍 *{title}*\n\n{content}\n\n🔗 {url}"
-    else:
-        return "🤷‍♂️ I couldn't find any reliable info on that. You can ask something else."
+#     # Build a human-friendly response from top result
+#     if results and results.results:
+#         top = results.results[0]
+#         title = top.title
+#         content = top.text[:500]  # limit to 500 chars
+#         url = top.url
+#         return f"🧠 Here's something I found:\n\n🔍 *{title}*\n\n{content}\n\n🔗 {url}"
+#     else:
+#         return "🤷‍♂️ I couldn't find any reliable info on that. You can ask something else."
 
  

@@ -54,10 +54,18 @@ def get_text_message_input(recipient, text):
     }
 
 
-
-# def generate_response(response):
-#     # Return text in uppercase
-#     return response.upper()
+def generate_response(response, request):
+        # Store user's session state
+    request.session['step'] = 'awaiting_network'
+    request.session['network'] = 'MTN'
+    request.session['amount'] = '500'
+    request.session['phone_number'] = '08012345678'
+    request.session.modified = True
+    
+    if response == "hi":
+        return f"Hello, {request.session['step']}"
+    # Return text in uppercase
+    return response.upper()
 
 
 def process_text_for_whatsapp(text):
