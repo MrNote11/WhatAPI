@@ -54,8 +54,7 @@ def get_text_message_input(recipient, text):
     }
 
 def generate_response(response, request):
-    # Sanitize user input
-    response = response.strip().lower()
+    
 
     # Initialize session values only once
     if "step" not in request.session:
