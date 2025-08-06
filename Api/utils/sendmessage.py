@@ -86,15 +86,15 @@ def process_text_for_whatsapp(text):
     return whatsapp_style_text
 
 
-def process_whatsapp_message(body):
+def process_whatsapp_message(body,request):
     wa_id = body["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
     name = body["entry"][0]["changes"][0]["value"]["contacts"][0]["profile"]["name"]
 
     message = body["entry"][0]["changes"][0]["value"]["messages"][0]
     message_body = message["text"]["body"]
-
+    logging.info(f"Received message from {name} ({wa_id}): {message_body}")
     # TODO: implement custom function here
-    response = generate_response(message_body, wa_id, name)
+    response = generate_response(message_body, request)
     response = process_text_for_whatsapp(response)
 
     data = get_text_message_input(settings.WHATSAPP_RECIPIENT_NUMBER_ID, response)
@@ -134,7 +134,7 @@ def handle_message(request):
         
         try:
             if is_valid_whatsapp_message(body):
-                process_whatsapp_message(body)
+                process_whatsapp_message(body, request)
                 return Response({"status":"message_successful"}, status=200)
             else:
                 return Response({
