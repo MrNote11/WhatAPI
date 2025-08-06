@@ -63,7 +63,11 @@ def generate_response(response, request):
     request.session.modified = True
     
     if response == "hi":
-        return f"Hello, {request.session['step']}"
+        request.session["step"]
+        return f"Hello, pls input the network you would like to use: (MTN, Airtel, Glo, 9mobile)"
+    # elif request.session["step"]:
+    #     request
+    
     # Return text in uppercase
     return response.upper()
 
@@ -99,6 +103,13 @@ def process_whatsapp_message(body,request):
 
     data = get_text_message_input(settings.WHATSAPP_RECIPIENT_NUMBER_ID, response)
     send_whatsapp_messages(data)
+    return JsonResponse({
+        "data": [{
+            "message_body":message_body,
+            "wa_id":wa_id,
+            "name":name
+        }]
+    }, status=200)
     
 
 
