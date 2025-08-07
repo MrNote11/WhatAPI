@@ -66,7 +66,7 @@ def generate_response(response, request):
         request.session['amount'] = ['100', '200', '500', '1000']
         request.session['step'] = 'choose_network'
         request.session.modified = True
-        return f"Hello, please input the network you'd like to use: (MTN, Airtel, Glo, 9mobile)"
+        return f"Hello, please input the network you'd like to use: {request.session['network']}"
 
     # If step is missing but user already sent a valid option like "MTN", handle gracefully
     if step is None:
@@ -111,7 +111,7 @@ def generate_response(response, request):
         else:
             return "Please reply with 'yes' or 'no'."
 
-    return "Please say 'hi' to begin."
+    return "What are you trying to do? Please say 'hi' to start over."
 
 def process_text_for_whatsapp(text):
     # Remove brackets
@@ -140,7 +140,7 @@ def process_whatsapp_message(body,request):
     logging.info(f"Received message from {name} ({wa_id}): {message_body}")
     # TODO: implement custom function here
     response = generate_response(message_body, request)
-    response = process_text_for_whatsapp(response)
+    # response = process_text_for_whatsapp(response)
 
     data = get_text_message_input(settings.WHATSAPP_RECIPIENT_NUMBER_ID, response)
     send_whatsapp_messages(data)
