@@ -65,9 +65,8 @@ def generate_response(response, request):
 
     # Always allow restart by typing "hi"
     if response == "hi":
-        print(f"Hello, please input the network you'd like to use: {''.join(request.session['network'])}")
         step = request.session["step"] = 'choose_network'
-        return step 
+        return "Please choose a network: " + ', '.join(request.session['network'])
 
 
     if step == 'choose_network':
