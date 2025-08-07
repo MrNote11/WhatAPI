@@ -56,19 +56,23 @@ def get_text_message_input(recipient, text):
 def generate_response(response, request):
     response = response.strip().lower()
 
-    # Initialize session once
-    if "step" not in request.session:
+    step = request.session.get("step")  # Get current step or None
+
+    # Allow starting the flow at any time with "hi"
+    if response == "hi":
+        # Reinitialize session
+        request.session.flush()
         request.session['network'] = ['mtn', 'airtel', 'glo', '9mobile']
         request.session['amount'] = ['100', '200', '500', '1000']
-        request.session['step'] = 'greet'
+        request.session['step'] = 'choose_network'
         request.session.modified = True
+        return f"Hello, please input the network you'd like to use: (MTN, Airtel, Glo, 9mobile)"
 
-    # Always allow restart by typing "hi"
-    if response == "hi":
-        step = request.session["step"] = 'choose_network'
-        return "Please choose a network: " + ', '.join(request.session['network'])
+    # If step is missing but user already sent a valid option like "MTN", handle gracefully
+    if step is None:
+        return "Please say 'hi' to begin."
 
-
+    # STEP 1: Choose network
     if step == 'choose_network':
         if response in request.session['network']:
             request.session['chosen_network'] = response
@@ -77,6 +81,7 @@ def generate_response(response, request):
         else:
             return f"Please pick between: {', '.join(request.session['network'])}"
 
+    # STEP 2: Enter phone number
     elif step == 'phone_number':
         if response.isdigit() and len(response) == 11:
             request.session['phone_number'] = response
@@ -85,6 +90,7 @@ def generate_response(response, request):
         else:
             return "Please enter a valid 11-digit phone number."
 
+    # STEP 3: Choose amount
     elif step == 'amount':
         if response in request.session['amount']:
             request.session['amount_selected'] = response
@@ -94,6 +100,7 @@ def generate_response(response, request):
         else:
             return f"Please choose a valid amount: {', '.join(request.session['amount'])}"
 
+    # STEP 4: Confirm
     elif step == 'confirm':
         if response == 'yes':
             request.session.flush()
@@ -104,7 +111,6 @@ def generate_response(response, request):
         else:
             return "Please reply with 'yes' or 'no'."
 
-    # If step is somehow unknown
     return "Please say 'hi' to begin."
 
 def process_text_for_whatsapp(text):
