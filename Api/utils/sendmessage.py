@@ -114,7 +114,7 @@ def generate_response(response, request):
             return "Please reply with *yes* or *no*."
 
     # Catch-all fallback
-    return "👋 Please type *welcome* to begin."
+    return "👋 Please type *welcome* to begin again."
 
 
 
