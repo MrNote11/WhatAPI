@@ -75,7 +75,7 @@ def generate_response(response, request):
 
     # STEP 1: Choose network
     if step == 'choose_network':
-        if response in request.session['network']:
+        if response == request.session['network']:
             # request.session['chosen_network'] = response
             step = request.session["step"] = 'phone_number'
             return "Input the phone number to recharge:"
@@ -93,7 +93,7 @@ def generate_response(response, request):
 
     # STEP 3: Choose amount
     elif step == 'amount':
-        if response in request.session['amount']:
+        if response == request.session['amount']:
             # request.session['amount_selected'] = response
             step = request.session["step"] = 'confirm'
             return (f"Please confirm: Recharge {request.session['amount_selected']} "
