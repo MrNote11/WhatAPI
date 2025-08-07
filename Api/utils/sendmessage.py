@@ -105,7 +105,7 @@ def generate_response(response, request):
     elif step == 'confirm':
         if response == 'yes':
             request.session.flush()
-            return "You have been credited successfully!"
+            return "You have been credited successfully!, enter hi to start again"
         elif response == 'no':
             request.session.flush()
             return "Recharge cancelled."
