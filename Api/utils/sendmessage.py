@@ -52,6 +52,7 @@ def get_text_message_input(recipient, text):
         "type": "text",
         "text": {"preview_url": False, "body": text},
     }
+    
 def generate_response(response, request):
     response = response.strip().lower()
 
@@ -64,10 +65,10 @@ def generate_response(response, request):
 
     # Always allow restart by typing "hi"
     if response == "hi":
-        request.session['step'] = 'choose_network'
-        return f"Hello, please input the network you'd like to use: (MTN, Airtel, Glo, 9mobile)"
+        print(f"Hello, please input the network you'd like to use: {''.join(request.session['network'])}")
+        step = request.session["step"] = 'choose_network'
+        return step 
 
-    step = request.session.get("step")
 
     if step == 'choose_network':
         if response in request.session['network']:
