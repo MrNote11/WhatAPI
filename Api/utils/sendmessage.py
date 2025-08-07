@@ -58,13 +58,12 @@ def generate_response(response, request):
     response = response.strip().lower()
 
     # Initialize session if not yet set
-    if 'step' not in request.session:
-        request.session['network'] = ['mtn', 'airtel', 'glo', '9mobile']
-        request.session['amount'] = ['100', '200', '500', '1000']
-        request.session['response'] = ['yes', 'no']
-        request.session['step'] = 'choose_network'
-        request.session.modified = True
-        return "Hello! Please choose a network: MTN, Airtel, Glo, or 9mobile"
+    if response:
+        card = ['mtn', 'airtel', 'glo', '9mobile']
+        amount = ['100', '200', '500', '1000']
+        answer = ('yes', 'no')
+
+        return f"Hello! Please choose a network: {card}"
 
     # Step: choose network
     if request.session['step'] == 'choose_network':
@@ -134,7 +133,7 @@ def process_whatsapp_message(body,request):
 
     data = get_text_message_input(settings.WHATSAPP_RECIPIENT_NUMBER_ID, response)
     send_whatsapp_messages(data)
-    return JsonResponse({
+    return Response({
         "data": [{
             "message_body":message_body,
             "wa_id":wa_id,
