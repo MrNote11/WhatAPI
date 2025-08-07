@@ -79,39 +79,39 @@ def generate_response(response, request):
         return f"Enter Your Phone Number:"
     
 
-    else:
-        return f"Hello type welcome to start"
+    # else:
+    #     return f"Hello type welcome to start"
    
 
-    # Step: input phone number
-    if data == "welcome" and response in card:
-        if response:
-            return f"drop your phone number"
-    else:
-        return f"pls "
-        if response.isdigit() and len(response) == 11:
-            request.session['phone_number'] = response
-            request.session['step'] = 'amount'
-            return f"How much airtime do you want to buy? Choose from: {', '.join(request.session['amount'])}"
-        return "Invalid phone number. Please enter an 11-digit Nigerian number."
+    # # Step: input phone number
+    # if data == "welcome" and response in card:
+    #     if response:
+    #         return f"drop your phone number"
+    # else:
+    #     return f"pls "
+    #     if response.isdigit() and len(response) == 11:
+    #         request.session['phone_number'] = response
+    #         request.session['step'] = 'amount'
+    #         return f"How much airtime do you want to buy? Choose from: {', '.join(request.session['amount'])}"
+    #     return "Invalid phone number. Please enter an 11-digit Nigerian number."
 
-    # Step: select amount
-    elif request.session['step'] == 'amount':
-        if response in request.session['amount']:
-            request.session['amount_selected'] = response
-            request.session['step'] = 'confirm'
-            return f"Confirm: Recharge {request.session['phone_number']} on {request.session['network_selected'].upper()} with ₦{response}? (yes/no)"
-        return f"Invalid amount. Choose from: {', '.join(request.session['amount'])}"
+    # # Step: select amount
+    # elif request.session['step'] == 'amount':
+    #     if response in request.session['amount']:
+    #         request.session['amount_selected'] = response
+    #         request.session['step'] = 'confirm'
+    #         return f"Confirm: Recharge {request.session['phone_number']} on {request.session['network_selected'].upper()} with ₦{response}? (yes/no)"
+    #     return f"Invalid amount. Choose from: {', '.join(request.session['amount'])}"
 
-    # Step: confirm
-    elif request.session['step'] == 'confirm':
-        if response == 'yes':
-            # Here you'd trigger actual recharge logic
-            request.session.flush()  # Clear session
-            return "You have been credited successfully!"
-        else:
-            request.session.flush()
-            return "Recharge cancelled."
+    # # Step: confirm
+    # elif request.session['step'] == 'confirm':
+    #     if response == 'yes':
+    #         # Here you'd trigger actual recharge logic
+    #         request.session.flush()  # Clear session
+    #         return "You have been credited successfully!"
+    #     else:
+    #         request.session.flush()
+    #         return "Recharge cancelled."
 
     # Fallback
     return "Invalid input. Please say 'hi' to start over."
