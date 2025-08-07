@@ -69,14 +69,15 @@ def generate_response(response, request):
         return f"Hello, please input the network you'd like to use: {request.session['network']}"
 
     # If step is missing but user already sent a valid option like "MTN", handle gracefully
+    step = request.session["step"] = 'choose_network'
     if step is None:
         return "Please say 'hi' to begin."
 
     # STEP 1: Choose network
     if step == 'choose_network':
         if response in request.session['network']:
-            request.session['chosen_network'] = response
-            request.session["step"] = 'phone_number'
+            # request.session['chosen_network'] = response
+            step = request.session["step"] = 'phone_number'
             return "Input the phone number to recharge:"
         else:
             return f"Please pick between: {', '.join(request.session['network'])}"
@@ -85,7 +86,7 @@ def generate_response(response, request):
     elif step == 'phone_number':
         if response.isdigit() and len(response) == 11:
             request.session['phone_number'] = response
-            request.session["step"] = 'amount'
+            step = request.session["step"] = 'amount'
             return f"How much airtime would you like to buy? Options: {', '.join(request.session['amount'])}"
         else:
             return "Please enter a valid 11-digit phone number."
@@ -93,8 +94,8 @@ def generate_response(response, request):
     # STEP 3: Choose amount
     elif step == 'amount':
         if response in request.session['amount']:
-            request.session['amount_selected'] = response
-            request.session["step"] = 'confirm'
+            # request.session['amount_selected'] = response
+            step = request.session["step"] = 'confirm'
             return (f"Please confirm: Recharge {request.session['amount_selected']} "
                     f"on {request.session['chosen_network']} for {request.session['phone_number']}? (yes/no)")
         else:
