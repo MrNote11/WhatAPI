@@ -54,65 +54,54 @@ def get_text_message_input(recipient, text):
     }
     
 def generate_response(response, request):
+    # Normalize the response
     response = response.strip().lower()
 
-    step = request.session.get("step")  # Get current step or None
-
-    # Allow starting the flow at any time with "hi"
-    if response == "hi":
-        # Reinitialize session
-        request.session.flush()
+    # Initialize session if not yet set
+    if 'step' not in request.session:
         request.session['network'] = ['mtn', 'airtel', 'glo', '9mobile']
         request.session['amount'] = ['100', '200', '500', '1000']
+        request.session['response'] = ['yes', 'no']
         request.session['step'] = 'choose_network'
         request.session.modified = True
-        return f"Hello, please input the network you'd like to use: {request.session['network']}"
+        return "Hello! Please choose a network: MTN, Airtel, Glo, or 9mobile"
 
-    # If step is missing but user already sent a valid option like "MTN", handle gracefully
-    step = request.session["step"] = 'choose_network'
-    if step is None:
-        return "Please say 'hi' to begin."
+    # Step: choose network
+    if request.session['step'] == 'choose_network':
+        if response in request.session['network']:
+            request.session['network_selected'] = response
+            request.session['step'] = 'phone_number'
+            return "Please enter the phone number you want to recharge:"
+        return f"Invalid network. Choose one of: {', '.join(request.session['network'])}"
 
-    # STEP 1: Choose network
-    if step == 'choose_network':
-        if response == request.session['network']:
-            # request.session['chosen_network'] = response
-            step = request.session["step"] = 'phone_number'
-            return "Input the phone number to recharge:"
-        else:
-            return f"Please pick between: {', '.join(request.session['network'])}"
-
-    # STEP 2: Enter phone number
-    elif step == 'phone_number':
+    # Step: input phone number
+    elif request.session['step'] == 'phone_number':
         if response.isdigit() and len(response) == 11:
             request.session['phone_number'] = response
-            step = request.session["step"] = 'amount'
-            return f"How much airtime would you like to buy? Options: {', '.join(request.session['amount'])}"
-        else:
-            return "Please enter a valid 11-digit phone number."
+            request.session['step'] = 'amount'
+            return f"How much airtime do you want to buy? Choose from: {', '.join(request.session['amount'])}"
+        return "Invalid phone number. Please enter an 11-digit Nigerian number."
 
-    # STEP 3: Choose amount
-    elif step == 'amount':
-        if response == request.session['amount']:
-            # request.session['amount_selected'] = response
-            step = request.session["step"] = 'confirm'
-            return (f"Please confirm: Recharge {request.session['amount_selected']} "
-                    f"on {request.session['chosen_network']} for {request.session['phone_number']}? (yes/no)")
-        else:
-            return f"Please choose a valid amount: {', '.join(request.session['amount'])}"
+    # Step: select amount
+    elif request.session['step'] == 'amount':
+        if response in request.session['amount']:
+            request.session['amount_selected'] = response
+            request.session['step'] = 'confirm'
+            return f"Confirm: Recharge {request.session['phone_number']} on {request.session['network_selected'].upper()} with ₦{response}? (yes/no)"
+        return f"Invalid amount. Choose from: {', '.join(request.session['amount'])}"
 
-    # STEP 4: Confirm
-    elif step == 'confirm':
+    # Step: confirm
+    elif request.session['step'] == 'confirm':
         if response == 'yes':
-            request.session.flush()
-            return "You have been credited successfully!, enter hi to start again"
-        elif response == 'no':
+            # Here you'd trigger actual recharge logic
+            request.session.flush()  # Clear session
+            return "You have been credited successfully!"
+        else:
             request.session.flush()
             return "Recharge cancelled."
-        else:
-            return "Please reply with 'yes' or 'no'."
 
-    return "What are you trying to do? Please say 'hi' to start over."
+    # Fallback
+    return "Invalid input. Please say 'hi' to start over."
 
 def process_text_for_whatsapp(text):
     # Remove brackets
