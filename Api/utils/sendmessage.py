@@ -53,107 +53,70 @@ def get_text_message_input(recipient, text):
         "text": {"preview_url": False, "body": text},
     }
     
-    
 def generate_response(response, request):
-    # Step 1: Normalize the input response
-    response = response.strip().lower().replace('_', '').replace(' ', '')
+    response = response.strip().lower().replace("_", " ")  # normalize input like 'Start', 'WELCOME', 'glo_mobile'
 
-    # Step 2: Initialize the session dict only once
-    if 'step' not in request.session:
-        request.session['step'] = 'start'
-        request.session['card_options'] = ['mtn', 'airtel', 'glo', '9mobile']
-        request.session['amount_options'] = ['100', '200', '500', '1000']
-        request.session['data'] = {}
+    # Set up possible values
+    networks = ['mtn', 'airtel', 'glo', '9mobile']
+    amounts = ['100', '200', '500', '1000']
+    confirmations = ['yes', 'no']
+
+    # Initialize session state if not present
+    if "step" not in request.session:
+        request.session['step'] = "start"
         request.session.modified = True
-        return " Hello! Please type *welcome* to begin."
 
-    step = request.session['step']
-    cards = request.session['card_options']
-    amounts = request.session['amount_options']
-    data = request.session['data']
+    # STEP 1: Start
+    if request.session["step"] == "start":
+        if response == "welcome":
+            request.session["step"] = "choose_network"
+            return "📡 Choose a network: MTN, Airtel, Glo, or 9mobile"
+        else:
+            return "👋 Hello! Please type *welcome* to begin."
 
-    # Step 3: Handle flow
-    if step == 'start':
-        if response == 'welcome':
-            request.session['step'] = 'choose_network'
-            request.session.modified = True
-            return f" Choose a network: {', '.join(cards)}"
-        return " Please type *welcome* to begin."
+    # STEP 2: Choose Network
+    elif request.session["step"] == "choose_network":
+        if response in networks:
+            request.session["network"] = response
+            request.session["step"] = "phone_number"
+            return "📱 Enter the phone number you'd like to recharge (11 digits):"
+        else:
+            return f"❌ Invalid choice. Pick one: {', '.join(networks)}"
 
-    elif step == 'choose_network':
-        if response in [c.lower().replace(' ', '') for c in cards]:
-            data['network'] = response
-            request.session['step'] = 'phone_number'
-            request.session['data'] = data
-            request.session.modified = True
-            return " Enter your phone number:"
-        return f"Invalid network. Choose one of: {', '.join(cards)}"
-
-    elif step == 'phone_number':
+    # STEP 3: Enter Phone Number
+    elif request.session["step"] == "phone_number":
         if response.isdigit() and len(response) == 11:
-            data['phone_number'] = response
-            request.session['step'] = 'amount'
-            request.session['data'] = data
-            request.session.modified = True
-            return f" Enter recharge amount: {', '.join(amounts)}"
-        return "Invalid phone number. Please enter a valid 10+ digit number."
+            request.session["phone"] = response
+            request.session["step"] = "choose_amount"
+            return f"💵 Enter amount: {', '.join(amounts)}"
+        else:
+            return "❗ Enter a valid 11-digit phone number."
 
-    elif step == 'amount':
+    # STEP 4: Choose Amount
+    elif request.session["step"] == "choose_amount":
         if response in amounts:
-            data['amount'] = response
-            request.session['step'] = 'confirm'
-            request.session['data'] = data
-            request.session.modified = True
-            return f" Confirm recharge of ₦{data['amount']} to {data['phone_number']} on {data['network'].upper()}? (yes/no)"
-        return f" Invalid amount. Choose one of: {', '.join(amounts)}"
+            request.session["amount"] = response
+            request.session["step"] = "confirm"
+            return (f"✅ Confirm recharge of ₦{response} on {request.session['network']} "
+                    f"to {request.session['phone']}? (yes/no)")
+        else:
+            return f"❌ Invalid amount. Choose from: {', '.join(amounts)}"
 
-    elif step == 'confirm':
-        if response == 'yes':
+    # STEP 5: Confirmation
+    elif request.session["step"] == "confirm":
+        if response == "yes":
             request.session.flush()
-            return " Recharge successful. You have been credited!"
-        elif response == 'no':
+            return "🎉 Recharge successful!"
+        elif response == "no":
             request.session.flush()
-            return " Recharge cancelled."
-        return " Please reply with *yes* or *no*."
+            return "❌ Recharge cancelled."
+        else:
+            return "Please reply with *yes* or *no*."
 
-    return " I'm not sure what to do. Please type *welcome* to begin."
+    # Catch-all fallback
+    return "👋 Please type *welcome* to begin."
 
-    # else:
-    #     return f"Hello type welcome to start"
-   
 
-    # # Step: input phone number
-    # if data == "welcome" and response in card:
-    #     if response:
-    #         return f"drop your phone number"
-    # else:
-    #     return f"pls "
-    #     if response.isdigit() and len(response) == 11:
-    #         request.session['phone_number'] = response
-    #         request.session['step'] = 'amount'
-    #         return f"How much airtime do you want to buy? Choose from: {', '.join(request.session['amount'])}"
-    #     return "Invalid phone number. Please enter an 11-digit Nigerian number."
-
-    # # Step: select amount
-    # elif request.session['step'] == 'amount':
-    #     if response in request.session['amount']:
-    #         request.session['amount_selected'] = response
-    #         request.session['step'] = 'confirm'
-    #         return f"Confirm: Recharge {request.session['phone_number']} on {request.session['network_selected'].upper()} with ₦{response}? (yes/no)"
-    #     return f"Invalid amount. Choose from: {', '.join(request.session['amount'])}"
-
-    # # Step: confirm
-    # elif request.session['step'] == 'confirm':
-    #     if response == 'yes':
-    #         # Here you'd trigger actual recharge logic
-    #         request.session.flush()  # Clear session
-    #         return "You have been credited successfully!"
-    #     else:
-    #         request.session.flush()
-    #         return "Recharge cancelled."
-
-    # Fallback
-    return "Invalid input. Please say 'hi' to start over."
 
 def process_text_for_whatsapp(text):
     # Remove brackets
