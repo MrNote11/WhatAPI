@@ -53,31 +53,70 @@ def get_text_message_input(recipient, text):
         "text": {"preview_url": False, "body": text},
     }
     
+    
 def generate_response(response, request):
-    # Normalize the response
-    response = response.strip().lower()
-    data = request.session['data'] = False
-    # Initialize session if not yet set
-    if response:
-        card = ['mtn', 'airtel', 'glo', '9mobile']
-        amount = ['100', '200', '500', '1000']
-        answer = ('yes', 'no')
-        data = response
-        return f"Hello can you pls type welcome to start"
+    # Step 1: Normalize the input response
+    response = response.strip().lower().replace('_', '').replace(' ', '')
 
-    while data != "welcome":
-        return f"Hello can you pls type welcome to start"
-        
-    if data:
-        return f"Hello! Please choose a network\n: {card}"
-    
-    while response in card == False:
-        return f"Pls pick a correct card\n: {card}"
-    
-    if data and response in card == True:
-        # request.session['phone_number'] = response
-        return f"Enter Your Phone Number:"
-    
+    # Step 2: Initialize the session dict only once
+    if 'step' not in request.session:
+        request.session['step'] = 'start'
+        request.session['card_options'] = ['mtn', 'airtel', 'glo', '9mobile']
+        request.session['amount_options'] = ['100', '200', '500', '1000']
+        request.session['data'] = {}
+        request.session.modified = True
+        return " Hello! Please type *welcome* to begin."
+
+    step = request.session['step']
+    cards = request.session['card_options']
+    amounts = request.session['amount_options']
+    data = request.session['data']
+
+    # Step 3: Handle flow
+    if step == 'start':
+        if response == 'welcome':
+            request.session['step'] = 'choose_network'
+            request.session.modified = True
+            return f" Choose a network: {', '.join(cards)}"
+        return " Please type *welcome* to begin."
+
+    elif step == 'choose_network':
+        if response in [c.lower().replace(' ', '') for c in cards]:
+            data['network'] = response
+            request.session['step'] = 'phone_number'
+            request.session['data'] = data
+            request.session.modified = True
+            return " Enter your phone number:"
+        return f"Invalid network. Choose one of: {', '.join(cards)}"
+
+    elif step == 'phone_number':
+        if response.isdigit() and len(response) == 11:
+            data['phone_number'] = response
+            request.session['step'] = 'amount'
+            request.session['data'] = data
+            request.session.modified = True
+            return f" Enter recharge amount: {', '.join(amounts)}"
+        return "Invalid phone number. Please enter a valid 10+ digit number."
+
+    elif step == 'amount':
+        if response in amounts:
+            data['amount'] = response
+            request.session['step'] = 'confirm'
+            request.session['data'] = data
+            request.session.modified = True
+            return f" Confirm recharge of ₦{data['amount']} to {data['phone_number']} on {data['network'].upper()}? (yes/no)"
+        return f" Invalid amount. Choose one of: {', '.join(amounts)}"
+
+    elif step == 'confirm':
+        if response == 'yes':
+            request.session.flush()
+            return " Recharge successful. You have been credited!"
+        elif response == 'no':
+            request.session.flush()
+            return " Recharge cancelled."
+        return " Please reply with *yes* or *no*."
+
+    return " I'm not sure what to do. Please type *welcome* to begin."
 
     # else:
     #     return f"Hello type welcome to start"
