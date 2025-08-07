@@ -56,25 +56,39 @@ def get_text_message_input(recipient, text):
 def generate_response(response, request):
     # Normalize the response
     response = response.strip().lower()
-
+    data = request.session['data'] = False
     # Initialize session if not yet set
     if response:
         card = ['mtn', 'airtel', 'glo', '9mobile']
         amount = ['100', '200', '500', '1000']
         answer = ('yes', 'no')
+        data = response
+        return f"Hello can you pls type welcome to start"
 
-        return f"Hello! Please choose a network: {card}"
+    while data != "welcome":
+        return f"Hello can you pls type welcome to start"
+        
+    if data:
+        return f"Hello! Please choose a network\n: {card}"
+    
+    while response in card == False:
+        return f"Pls pick a correct card\n: {card}"
+    
+    if data and response in card == True:
+        # request.session['phone_number'] = response
+        return f"Enter Your Phone Number:"
+    
 
-    # Step: choose network
-    if request.session['step'] == 'choose_network':
-        if response in request.session['network']:
-            request.session['network_selected'] = response
-            request.session['step'] = 'phone_number'
-            return "Please enter the phone number you want to recharge:"
-        return f"Invalid network. Choose one of: {', '.join(request.session['network'])}"
+    else:
+        return f"Hello type welcome to start"
+   
 
     # Step: input phone number
-    elif request.session['step'] == 'phone_number':
+    if data == "welcome" and response in card:
+        if response:
+            return f"drop your phone number"
+    else:
+        return f"pls "
         if response.isdigit() and len(response) == 11:
             request.session['phone_number'] = response
             request.session['step'] = 'amount'
