@@ -11,9 +11,10 @@ import re
 import logging
 import hashlib
 import hmac
+from utils.sendmessage import *
 
 
-def validate_signature(body: bytes, signature: str, app_secret: str) -> bool:
+def verify_webhook_signature(body: bytes, signature: str, app_secret: str) -> bool:
     """
     Validates the request signature from Meta/Facebook using your app secret.
     """
@@ -37,7 +38,7 @@ def signature_required(view_func):
         signature = header_signature[7:]  # strip 'sha256='
         body = request.body  # Raw body bytes 
 
-        if not validate_signature(body, signature, settings.APP_SECRET):
+        if not verify_webhook_signature(body, signature, settings.APP_SECRET):
             logging.warning("Signature validation failed.")
             return JsonResponse({"error": "Signature mismatch"}, status=403)
 

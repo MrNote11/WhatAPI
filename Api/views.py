@@ -62,7 +62,7 @@ class FacebookWebhookView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return verify(request)
+        return verify_webhook(request)
 
     @method_decorator(signature_required)
     def post(self, request):

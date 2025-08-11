@@ -102,7 +102,6 @@ WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 WHATSAPP_CONTENT_TYPE = os.getenv("WHATSAPP_CONTENT_TYPE")
 WHATSAPP_WEBHOOK_VERIFY_TOKEN = os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN")
 WHATSAPP_RECIPIENT_NUMBER_ID = os.getenv("WHATSAPP_RECIPIENT_NUMBER_ID")
-
 TWILIO_SID = os.getenv("TWILIO_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 
@@ -113,7 +112,16 @@ APP_ID = os.getenv("APP_ID")
 SESSION_COOKIE_AGE = 600  # seconds (10 minutes)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-
+CACHES = {
+    'default': {
+        # For production, use Redis
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }  
+}
 DATABASE_URL = os.environ.get("RENDER_DATABASE_URL")
 
 if DATABASE_URL:
@@ -148,6 +156,10 @@ DRF_SPECTACULAR_SWAGGER_UI_SETTINGS = {
     'displayOperationId': True,
 }
 
+CORS_ALLOWED_ORIGINS = [
+    "https://graph.facebook.com",
+]
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "WhatAppApi"
 }
@@ -163,6 +175,40 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1"
 ]
+
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'whatsapp_bot.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'whatsapp_bot': {  # Replace with your app name
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
