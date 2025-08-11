@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
     'drf_yasg',
+    'Api',
     # 'drf_spectacular_sidecar',
     'drf_spectacular',
     'corsheaders',
@@ -108,21 +109,12 @@ TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 APP_SECRET = os.getenv("APP_SECRET")
 APP_ID = os.getenv("APP_ID")
 
-
 SESSION_COOKIE_AGE = 600  # seconds (10 minutes)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-CACHES = {
-    'default': {
-        # For production, use Redis
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
-    }  
-}
+
 DATABASE_URL = os.environ.get("RENDER_DATABASE_URL")
+
 
 if DATABASE_URL:
     DATABASES = {
@@ -141,6 +133,7 @@ else:
         }
     }
 
+
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
@@ -156,9 +149,9 @@ DRF_SPECTACULAR_SWAGGER_UI_SETTINGS = {
     'displayOperationId': True,
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "https://graph.facebook.com",
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "https://graph.facebook.com",
+# ]
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "WhatAppApi"
@@ -254,6 +247,18 @@ SIMPLE_JWT = {
     'TOKEN_BLACKLIST_ENABLED': True,
 }
 
+
+
+CACHES = {
+    'default': {
+        # For production, use Redis
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }  
+}
 
 
 # Password validation

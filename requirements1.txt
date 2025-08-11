@@ -142,3 +142,5 @@ openapi-codec==1.3.2
 redis==5.0.3
 referencing==0.35.1
 twilio
+django_redis
+redis

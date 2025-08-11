@@ -11,7 +11,6 @@ import re
 import logging
 import hashlib
 import hmac
-from utils.sendmessage import *
 
 
 def verify_webhook_signature(body: bytes, signature: str, app_secret: str) -> bool:
