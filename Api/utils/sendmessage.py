@@ -287,19 +287,6 @@ def verify_webhook_signature(payload, signature):
         return False
 
 
-
-# def validate_signature(body: bytes, signature: str, app_secret: str) -> bool:
-#     """
-#     Validates the request signature from Meta/Facebook using your app secret.
-#     """
-#     expected_signature = hmac.new(
-#         key=app_secret.encode('utf-8'),
-#         msg=body,  # ✅ Already bytes, no need to encode again
-#         digestmod=hashlib.sha256
-#     ).hexdigest()
-
-#     return hmac.compare_digest(expected_signature, signature)
-
 def process_whatsapp_message(body):
     """
     Process incoming WhatsApp message
