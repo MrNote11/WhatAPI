@@ -247,18 +247,30 @@ SIMPLE_JWT = {
     'TOKEN_BLACKLIST_ENABLED': True,
 }
 
+REDIS_RENDER = os.getenv('REDIS_RENDER_URL')
 
-
-CACHES = {
-    'default': {
-        # For production, use Redis
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+if REDIS_RENDER:
+    CACHES = {
+        'default': {
+            # For production, use Redis
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_RENDER,
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }  
 }
+else:
+    CACHES = {
+        'default': {
+            # For production, use Redis
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
+        }  
+    }
 
 
 # Password validation
