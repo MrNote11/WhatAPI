@@ -76,12 +76,14 @@ def get_user_state(wa_id):
     cache_key = f"whatsapp_user_{wa_id}"
     return cache.get(cache_key, {"step": "start"})
 
+
 def set_user_state(wa_id, state):
     """
     Store user's conversation state in cache (expires in 30 minutes)
     """
     cache_key = f"whatsapp_user_{wa_id}"
     cache.set(cache_key, state, timeout=1800)  # 30 minutes
+
 
 def clear_user_state(wa_id):
     """
@@ -128,13 +130,13 @@ def generate_response(message_body, wa_id):
         # STEP 3: Enter Phone Number
         elif current_step == "phone_number":
             # Validate phone number
-            clean_phone = re.sub(r'[^\d]', '', response)  # Remove non-digits
+            # clean_phone = re.sub(r'[^\d]', '', response)  # Remove non-digits
             
-            if len(clean_phone) == 11 and clean_phone.startswith(('080', '081', '070', '090', '091')):
-                user_state["phone"] = clean_phone
+            if len(response) == 11 and response.startswith(('080', '081', '070', '090', '091')) and response.isdigit():
+                user_state["phone"] = response
                 user_state["step"] = "choose_amount"
                 set_user_state(wa_id, user_state)
-                return f"💰 *Phone number: {clean_phone}*\n\nSelect recharge amount:\n• ₦100\n• ₦200\n• ₦500\n• ₦1000"
+                return f"💰 *Phone number: {response}*\n\nSelect recharge amount:\n• ₦100\n• ₦200\n• ₦500\n• ₦1000"
             else:
                 return "❗ Please enter a valid 11-digit Nigerian phone number starting with 070, 080, 081, 090, or 091."
 
@@ -244,7 +246,7 @@ def extract_message_data(body):
         wa_id = contact["wa_id"]
         name = contact.get("profile", {}).get("name", "Unknown")
         
-        # Extract message
+        # Extract message v   
         messages = value["messages"]
         message = messages[0]
         
@@ -265,26 +267,6 @@ def extract_message_data(body):
     except (KeyError, IndexError, TypeError) as e:
         logger.error(f"Error extracting message data: {str(e)}")
         raise WhatsAppBotError(f"Invalid message structure: {str(e)}")
-
-
-# def verify_webhook_signature(payload, signature):
-#     """
-#     Verify webhook signature from WhatsApp (if configured)
-#     """
-#     if not hasattr(settings, 'APP_SECRET') or not settings.APP_SECRET:
-#         return True  # Skip verification if no secret configured
-        
-#     try:
-#         expected_signature = hmac.new(
-#             settings.APP_SECRET.encode(),
-#             payload,
-#             hashlib.sha256
-#         ).hexdigest()
-        
-#         return hmac.compare_digest(f"sha256={expected_signature}", signature)
-#     except Exception as e:
-#         logger.error(f"Error verifying webhook signature: {str(e)}")
-#         return False
 
 
 def process_whatsapp_message(body):
@@ -340,18 +322,6 @@ def process_whatsapp_message(body):
         return {"status": "error", "message": "Internal server error"}
 
 
-# @csrf_exempt
-# @require_http_methods(["GET", "POST"])
-# def webhook(request):
-#     """
-#     Main webhook endpoint for WhatsApp
-#     """
-#     if request.method == "GET":
-#         return verify_webhook(request)
-#     else:
-#         return handle_message(request)
-
-
 def verify_webhook(request):
     """
     Verify webhook subscription (GET request)
@@ -383,15 +353,6 @@ def handle_message(request):
     Handle incoming webhook messages (POST request)
     """
     try:
-        #--- Verify signature if configured ---
-        # signature = request.headers.get('X-Hub-Signature-256', '')
-        # if not verify_webhook_signature(request.body, signature):
-        #     logger.warning("Invalid webhook signature")
-        #     return JsonResponse({
-        #         "status": "error",
-        #         "message": "Invalid signature"
-        #     }, status=403)
-        
         #--- Parse JSON body --- 
         try:
             body = json.loads(request.body.decode("utf-8"))
