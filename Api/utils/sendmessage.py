@@ -267,24 +267,24 @@ def extract_message_data(body):
         raise WhatsAppBotError(f"Invalid message structure: {str(e)}")
 
 
-def verify_webhook_signature(payload, signature):
-    """
-    Verify webhook signature from WhatsApp (if configured)
-    """
-    if not hasattr(settings, 'APP_SECRET') or not settings.APP_SECRET:
-        return True  # Skip verification if no secret configured
+# def verify_webhook_signature(payload, signature):
+#     """
+#     Verify webhook signature from WhatsApp (if configured)
+#     """
+#     if not hasattr(settings, 'APP_SECRET') or not settings.APP_SECRET:
+#         return True  # Skip verification if no secret configured
         
-    try:
-        expected_signature = hmac.new(
-            settings.APP_SECRET.encode(),
-            payload,
-            hashlib.sha256
-        ).hexdigest()
+#     try:
+#         expected_signature = hmac.new(
+#             settings.APP_SECRET.encode(),
+#             payload,
+#             hashlib.sha256
+#         ).hexdigest()
         
-        return hmac.compare_digest(f"sha256={expected_signature}", signature)
-    except Exception as e:
-        logger.error(f"Error verifying webhook signature: {str(e)}")
-        return False
+#         return hmac.compare_digest(f"sha256={expected_signature}", signature)
+#     except Exception as e:
+#         logger.error(f"Error verifying webhook signature: {str(e)}")
+#         return False
 
 
 def process_whatsapp_message(body):
@@ -340,16 +340,16 @@ def process_whatsapp_message(body):
         return {"status": "error", "message": "Internal server error"}
 
 
-@csrf_exempt
-@require_http_methods(["GET", "POST"])
-def webhook(request):
-    """
-    Main webhook endpoint for WhatsApp
-    """
-    if request.method == "GET":
-        return verify_webhook(request)
-    else:
-        return handle_message(request)
+# @csrf_exempt
+# @require_http_methods(["GET", "POST"])
+# def webhook(request):
+#     """
+#     Main webhook endpoint for WhatsApp
+#     """
+#     if request.method == "GET":
+#         return verify_webhook(request)
+#     else:
+#         return handle_message(request)
 
 
 def verify_webhook(request):
@@ -383,16 +383,16 @@ def handle_message(request):
     Handle incoming webhook messages (POST request)
     """
     try:
-        # Verify signature if configured
-        signature = request.headers.get('X-Hub-Signature-256', '')
-        if not verify_webhook_signature(request.body, signature):
-            logger.warning("Invalid webhook signature")
-            return JsonResponse({
-                "status": "error",
-                "message": "Invalid signature"
-            }, status=403)
+        #--- Verify signature if configured ---
+        # signature = request.headers.get('X-Hub-Signature-256', '')
+        # if not verify_webhook_signature(request.body, signature):
+        #     logger.warning("Invalid webhook signature")
+        #     return JsonResponse({
+        #         "status": "error",
+        #         "message": "Invalid signature"
+        #     }, status=403)
         
-        # Parse JSON body
+        #--- Parse JSON body --- 
         try:
             body = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:

@@ -63,7 +63,8 @@ class FacebookWebhookView(APIView):
 
     def get(self, request):
         return verify_webhook(request)
-
+    
+    @csrf_exempt
     @method_decorator(signature_required)
     def post(self, request):
         return handle_message(request)
