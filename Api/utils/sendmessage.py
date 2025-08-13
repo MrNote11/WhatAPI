@@ -301,8 +301,8 @@ def generate_response(message_body, wa_id, message_type="text"):
         elif current_step == "phone_number":
             # Validate phone number
             # clean_phone = re.sub(r'[^\d]', '', response)  # Remove non-digits
-            
-            if len(response) == 11 and response.startswith(('080', '081', '070', '090', '091')) and response.isdigits():
+
+            if len(response) == 11 and response.startswith(('080', '081', '070', '090', '091')) and response.isdigit():
                 user_state["phone"] = response
                 user_state["step"] = "choose_amount"
                 set_user_state(wa_id, user_state)
