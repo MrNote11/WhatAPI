@@ -2,7 +2,7 @@ from django.shortcuts import render, HttpResponse
 from rest_framework.views import APIView
 from django.conf import settings
 import logging
-from .decorators.security import signature_required
+from .decorators_security.security import signature_required
 import json
 from .utils.sendmessage import *
 from rest_framework import status

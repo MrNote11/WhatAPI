@@ -2,8 +2,6 @@ from django.conf import settings
 import requests
 import logging
 import json
-import hashlib
-import hmac
 import re
 from django.core.cache import cache
 from rest_framework.response import Response
@@ -11,7 +9,6 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-import time
 
 
 # Set up logging
@@ -429,6 +426,8 @@ def validate_message_structure(body):
     Validate that the webhook contains a valid WhatsApp message
     """
     try:
+        #Check if the payload body has the expected 3 keys
+        
         entry = body.get("entry", [])
         if not entry:
             return False
@@ -440,8 +439,13 @@ def validate_message_structure(body):
         value = changes[0].get("value", {})
         messages = value.get("messages")
         
+        #return if all 3 keys and they are not empty 
         return messages and len(messages) > 0
+    
+    #show errors
     except (IndexError, KeyError, TypeError):
+        
+        #return false
         return False
 
 
@@ -565,15 +569,21 @@ def process_whatsapp_message(body):
         return {"status": "error", "message": "Internal server error"}
 
 
+#--- Webhook verification and message handling views ---
 def verify_webhook(request):
     """
     Verify webhook subscription (GET request)
     """
+    
+    # Get parameters from request
     mode = request.GET.get("hub.mode")
     token = request.GET.get("hub.verify_token")
     challenge = request.GET.get("hub.challenge")
 
+    # Check if mode and token match the expected values
     if mode and token:
+        
+        #check if mode and token match the expected values
         if mode == "subscribe" and token == settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN:
             logger.info("Webhook verified successfully")
             return JsonResponse({"challenge": challenge}, status=200)
@@ -591,6 +601,7 @@ def verify_webhook(request):
         }, status=400)
 
 
+#--- handle incoming messages ---
 def handle_message(request):
     """
     Handle incoming webhook messages (POST request)
@@ -599,6 +610,8 @@ def handle_message(request):
         
         # Parse JSON body
         try:
+            
+            #extract the data and decode it to string -> json
             body = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
             logger.error("Failed to decode JSON from webhook")
@@ -608,10 +621,17 @@ def handle_message(request):
             }, status=400)
         
         # Handle status updates (delivery receipts, etc.)
+        
+        #extract the payload data from the entry
         entry = body.get("entry", [{}])[0]
+        
+        #extract the changes from the entry
         changes = entry.get("changes", [{}])[0]
+        
+        #extract the value from the changes
         value = changes.get("value", {})
         
+        # Check if this is a status update
         if value.get("statuses"):
             logger.info("Received WhatsApp status update")
             return JsonResponse({"status": "ok"}, status=200)
