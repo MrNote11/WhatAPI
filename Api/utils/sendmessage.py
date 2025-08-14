@@ -2,6 +2,8 @@ from django.conf import settings
 import requests
 import logging
 import json
+import hashlib
+import hmac
 import re
 from django.core.cache import cache
 from rest_framework.response import Response
@@ -9,7 +11,7 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-
+import time
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -17,7 +19,6 @@ logger = logging.getLogger(__name__)
 class WhatsAppBotError(Exception):
     """Custom exception for WhatsApp bot errors"""
     pass
-
 
 def send_whatsapp_message(recipient, message):
     """
@@ -52,7 +53,6 @@ def send_whatsapp_message(recipient, message):
         logger.error(f"Network error sending WhatsApp message: {str(e)}")
         return {"status": "error", "error": str(e)}
 
-
 def get_text_message_input(recipient, text):
     """
     Format message data for WhatsApp API
@@ -64,7 +64,6 @@ def get_text_message_input(recipient, text):
         "type": "text",
         "text": {"preview_url": False, "body": text},
     }
-
 
 def get_interactive_list_message(recipient, header, body, button_text, list_items):
     """
@@ -92,7 +91,6 @@ def get_interactive_list_message(recipient, header, body, button_text, list_item
         }
     }
 
-
 def get_interactive_button_message(recipient, body, buttons):
     """
     Create interactive button message for WhatsApp
@@ -110,7 +108,6 @@ def get_interactive_button_message(recipient, body, buttons):
             }
         }
     }
-
 
 def send_whatsapp_interactive_message(recipient, message_data):
     """
@@ -143,14 +140,12 @@ def send_whatsapp_interactive_message(recipient, message_data):
         logger.error(f"Network error sending interactive message: {str(e)}")
         return {"status": "error", "error": str(e)}
 
-
 def get_user_state(wa_id):
     """
     Get user's conversation state from cache
     """
     cache_key = f"whatsapp_user_{wa_id}"
     return cache.get(cache_key, {"step": "start"})
-
 
 def set_user_state(wa_id, state):
     """
@@ -159,14 +154,12 @@ def set_user_state(wa_id, state):
     cache_key = f"whatsapp_user_{wa_id}"
     cache.set(cache_key, state, timeout=1800)  # 30 minutes
 
-
 def clear_user_state(wa_id):
     """
     Clear user's conversation state
     """
     cache_key = f"whatsapp_user_{wa_id}"
     cache.delete(cache_key)
-
 
 def send_network_selection_menu(wa_id):
     """Send network selection interactive list"""
@@ -187,26 +180,27 @@ def send_network_selection_menu(wa_id):
     
     return send_whatsapp_interactive_message(wa_id, message_data)
 
-
 def send_amount_selection_menu(wa_id, network):
-    """Send amount selection interactive list"""
+    """Send amount selection interactive list with custom amount option"""
     list_items = [
         {"id": "100", "title": "₦100", "description": "One Hundred Naira"},
         {"id": "200", "title": "₦200", "description": "Two Hundred Naira"},
         {"id": "500", "title": "₦500", "description": "Five Hundred Naira"},
-        {"id": "1000", "title": "₦1000", "description": "One Thousand Naira"}
+        {"id": "1000", "title": "₦1000", "description": "One Thousand Naira"},
+        {"id": "2000", "title": "₦2000", "description": "Two Thousand Naira"},
+        {"id": "5000", "title": "₦5000", "description": "Five Thousand Naira"},
+        {"id": "custom", "title": "💬 Custom Amount", "description": "Enter your own amount"}
     ]
     
     message_data = get_interactive_list_message(
         wa_id,
         f"💰 {network.upper()} Amount Selection",
-        "Please select the recharge amount:",
+        "Please select the recharge amount or choose custom to enter your own:",
         "Select Amount",
         list_items
     )
     
     return send_whatsapp_interactive_message(wa_id, message_data)
-
 
 def send_confirmation_buttons(wa_id, network, phone, amount):
     """Send confirmation buttons"""
@@ -238,7 +232,6 @@ def send_confirmation_buttons(wa_id, network, phone, amount):
     message_data = get_interactive_button_message(wa_id, confirmation_text, buttons)
     return send_whatsapp_interactive_message(wa_id, message_data)
 
-
 def generate_response(message_body, wa_id, message_type="text"):
     """
     Generate response based on user input and conversation state
@@ -254,7 +247,7 @@ def generate_response(message_body, wa_id, message_type="text"):
         
         # Set up possible values
         networks = ['mtn', 'airtel', 'glo', '9mobile']
-        amounts = ['100', '200', '500', '1000']
+        preset_amounts = ['100', '200', '500', '1000', '2000', '5000']
         
         # Get user state
         user_state = get_user_state(wa_id)
@@ -298,9 +291,11 @@ def generate_response(message_body, wa_id, message_type="text"):
         elif current_step == "phone_number":
             # Validate phone number
             # clean_phone = re.sub(r'[^\d]', '', response)  # Remove non-digits
+            clean_phone = re.sub(r'\s+', '', response)
 
-            if len(response) == 11 and response.startswith(('080', '081', '070', '090', '091')) and response.isdigit():
-                user_state["phone"] = response
+            
+            if len(clean_phone) == 11 and clean_phone.startswith(('080', '081', '070', '090', '091')):
+                user_state["phone"] = clean_phone
                 user_state["step"] = "choose_amount"
                 set_user_state(wa_id, user_state)
                 
@@ -311,26 +306,22 @@ def generate_response(message_body, wa_id, message_type="text"):
                 if menu_result["status"] == "success":
                     return None  # Don't send additional text message
                 else:
-                    return f"💰 *Phone Number: {response}*\n\nSelect amount: ₦100, ₦200, ₦500, or ₦1000"
-            elif len(response) > 11 or len(response) < 11:
-                return "Input the right amount of digits"
+                    return f"💰 *Phone Number: {clean_phone}*\n\nSelect amount: ₦100, ₦200, ₦500, ₦1000, ₦2000, ₦5000, or type 'custom' for your own amount"
             else:
                 return "❗ *Invalid Phone Number*\n\nPlease enter a valid 11-digit Nigerian phone number starting with:\n• 070, 080, 081, 090, or 091\n\n_Example: 08012345678_"
 
         # STEP 4: Choose Amount
         elif current_step == "choose_amount":
-            # Handle amount selection
-            amount_str = response.replace('₦', '').strip()
-            
-            if amount_str in amounts:
-                user_state["amount"] = amount_str
+            # Handle preset amount selection
+            if response in preset_amounts:
+                user_state["amount"] = response
                 user_state["step"] = "confirm"
                 set_user_state(wa_id, user_state)
                 
                 # Send confirmation buttons
                 network = user_state["network"]
                 phone = user_state["phone"]
-                button_result = send_confirmation_buttons(wa_id, network, phone, amount_str)
+                button_result = send_confirmation_buttons(wa_id, network, phone, response)
                 
                 if button_result["status"] == "success":
                     return None  # Don't send additional text message
@@ -338,8 +329,19 @@ def generate_response(message_body, wa_id, message_type="text"):
                     return (f"✅ *Please Confirm*\n\n"
                            f"Network: *{network.upper()}*\n"
                            f"Phone: *{phone}*\n"
-                           f"Amount: *₦{amount_str}*\n\n"
+                           f"Amount: *₦{response}*\n\n"
                            f"Reply *YES* to confirm or *NO* to cancel.")
+                           
+            # Handle custom amount selection
+            elif response == "custom":
+                user_state["step"] = "custom_amount"
+                set_user_state(wa_id, user_state)
+                return (f"💰 *Custom Amount Entry*\n\n"
+                       f"Please enter your desired recharge amount:\n\n"
+                       f"• Minimum: ₦50\n"
+                       f"• Maximum: ₦50,000\n"
+                       f"• Enter numbers only (e.g., 150, 750, 1500)\n\n"
+                       f"_Type the amount without ₦ symbol_")
             else:
                 # Resend amount menu
                 network = user_state.get("network", "")
@@ -347,7 +349,48 @@ def generate_response(message_body, wa_id, message_type="text"):
                 if menu_result["status"] == "success":
                     return None
                 else:
-                    return f"❌ Invalid amount. Please choose: *₦100, ₦200, ₦500, or ₦1000*"
+                    return f"❌ Invalid amount. Please choose from the menu or select 'Custom Amount' to enter your own."
+
+        # STEP 4B: Handle Custom Amount Input
+        elif current_step == "custom_amount":
+            # Validate custom amount
+            try:
+                # Clean the input - remove any currency symbols, commas, spaces
+                clean_amount = re.sub(r'[₦,\s]', '', response)
+                
+                # Check if it's a valid number
+                if not clean_amount.isdigit():
+                    return "❌ *Invalid Input*\n\nPlease enter numbers only.\n\n_Example: 150, 750, 1500_\n\nEnter your desired amount:"
+                
+                amount_value = int(clean_amount)
+                
+                # Validate amount range
+                if amount_value < 50:
+                    return "❌ *Amount Too Low*\n\nMinimum recharge amount is ₦50.\n\nPlease enter a higher amount:"
+                elif amount_value > 50000:
+                    return "❌ *Amount Too High*\n\nMaximum recharge amount is ₦50,000.\n\nPlease enter a lower amount:"
+                else:
+                    # Valid custom amount
+                    user_state["amount"] = str(amount_value)
+                    user_state["step"] = "confirm"
+                    set_user_state(wa_id, user_state)
+                    
+                    # Send confirmation buttons
+                    network = user_state["network"]
+                    phone = user_state["phone"]
+                    button_result = send_confirmation_buttons(wa_id, network, phone, str(amount_value))
+                    
+                    if button_result["status"] == "success":
+                        return None  # Don't send additional text message
+                    else:
+                        return (f"✅ *Please Confirm*\n\n"
+                               f"Network: *{network.upper()}*\n"
+                               f"Phone: *{phone}*\n"
+                               f"Amount: *₦{amount_value:,}*\n\n"
+                               f"Reply *YES* to confirm or *NO* to cancel.")
+                        
+            except ValueError:
+                return "❌ *Invalid Amount*\n\nPlease enter a valid number.\n\n_Example: 150, 750, 1500_\n\nEnter your desired amount:"
 
         # STEP 5: Confirmation
         elif current_step == "confirm":
@@ -363,9 +406,20 @@ def generate_response(message_body, wa_id, message_type="text"):
                 # Clear user state after successful transaction
                 clear_user_state(wa_id)
                 
+                # Format amount with commas for large numbers
+                try:
+                    formatted_amount = f"₦{int(amount):,}"
+                except:
+                    formatted_amount = f"₦{amount}"
+                
                 return (f"🎉 *Recharge Successful!*\n\n"
-                       f"✅ ₦{amount} {network.upper()} airtime has been sent to *{phone}*\n\n"
+                       f"✅ {formatted_amount} {network.upper()} airtime has been sent to *{phone}*\n\n"
                        f"📱 Your airtime should arrive within 2-5 minutes.\n\n"
+                       f"📊 Transaction Details:\n"
+                       f"• Amount: {formatted_amount}\n"
+                       f"• Network: {network.upper()}\n"
+                       f"• Phone: {phone}\n"
+                       f"• Status: Completed ✅\n\n"
                        f"Thank you for using our service! 🙏\n"
                        f"Type *welcome* to make another recharge.")
                 
@@ -407,7 +461,6 @@ def generate_response(message_body, wa_id, message_type="text"):
         clear_user_state(wa_id)
         return "⚠️ *System Error*\n\nSorry, something went wrong. Please type *welcome* to try again."
 
-
 def process_text_for_whatsapp(text):
     """
     Process text for WhatsApp formatting
@@ -420,14 +473,11 @@ def process_text_for_whatsapp(text):
     
     return text
 
-
 def validate_message_structure(body):
     """
     Validate that the webhook contains a valid WhatsApp message
     """
     try:
-        #Check if the payload body has the expected 3 keys
-        
         entry = body.get("entry", [])
         if not entry:
             return False
@@ -439,15 +489,9 @@ def validate_message_structure(body):
         value = changes[0].get("value", {})
         messages = value.get("messages")
         
-        #return if all 3 keys and they are not empty 
         return messages and len(messages) > 0
-    
-    #show errors
     except (IndexError, KeyError, TypeError):
-        
-        #return false
         return False
-
 
 def extract_message_data(body):
     """
@@ -508,12 +552,10 @@ def extract_message_data(body):
         logger.error(f"Error extracting message data: {str(e)}")
         raise WhatsAppBotError(f"Invalid message structure: {str(e)}")
 
-
 def process_whatsapp_message(body):
     """
     Process incoming WhatsApp message
     """
-    
     try:
         wa_id, name, message_body, message_type = extract_message_data(body)
         
@@ -568,22 +610,15 @@ def process_whatsapp_message(body):
         logger.error(f"Unexpected error processing message: {str(e)}")
         return {"status": "error", "message": "Internal server error"}
 
-
-#--- Webhook verification and message handling views ---
 def verify_webhook(request):
     """
     Verify webhook subscription (GET request)
     """
-    
-    # Get parameters from request
     mode = request.GET.get("hub.mode")
     token = request.GET.get("hub.verify_token")
     challenge = request.GET.get("hub.challenge")
 
-    # Check if mode and token match the expected values
     if mode and token:
-        
-        #check if mode and token match the expected values
         if mode == "subscribe" and token == settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN:
             logger.info("Webhook verified successfully")
             return JsonResponse({"challenge": challenge}, status=200)
@@ -600,8 +635,6 @@ def verify_webhook(request):
             "message": "Missing parameters"
         }, status=400)
 
-
-#--- handle incoming messages ---
 def handle_message(request):
     """
     Handle incoming webhook messages (POST request)
@@ -610,8 +643,6 @@ def handle_message(request):
         
         # Parse JSON body
         try:
-            
-            #extract the data and decode it to string -> json
             body = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
             logger.error("Failed to decode JSON from webhook")
@@ -621,17 +652,10 @@ def handle_message(request):
             }, status=400)
         
         # Handle status updates (delivery receipts, etc.)
-        
-        #extract the payload data from the entry
         entry = body.get("entry", [{}])[0]
-        
-        #extract the changes from the entry
         changes = entry.get("changes", [{}])[0]
-        
-        #extract the value from the changes
         value = changes.get("value", {})
         
-        # Check if this is a status update
         if value.get("statuses"):
             logger.info("Received WhatsApp status update")
             return JsonResponse({"status": "ok"}, status=200)
@@ -664,7 +688,6 @@ def handle_message(request):
             "status": "error",
             "message": "Internal server error"
         }, status=500)
-
 
 # Test function for development
 def test_send_message():
