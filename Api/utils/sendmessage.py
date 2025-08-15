@@ -109,9 +109,41 @@ def get_interactive_button_message(recipient, body, buttons):
         }
     }
 
+def get_interactive_flow_message(recipient, header, body, flow_id, flow_token, screen_id, flow_data=None):
+    """
+    Create interactive flow message for custom input forms
+    """
+    message_data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": recipient,
+        "type": "interactive",
+        "interactive": {
+            "type": "flow",
+            "header": {"type": "text", "text": header},
+            "body": {"text": body},
+            "footer": {"text": "Complete the form below"},
+            "action": {
+                "name": "flow",
+                "parameters": {
+                    "flow_message_version": "3",
+                    "flow_token": flow_token,
+                    "flow_id": flow_id,
+                    "flow_cta": "Enter Details",
+                    "flow_action": "navigate",
+                    "flow_action_payload": {
+                        "screen": screen_id,
+                        "data": flow_data or {}
+                    }
+                }
+            }
+        }
+    }
+    return message_data
+
 def send_whatsapp_interactive_message(recipient, message_data):
     """
-    Send interactive WhatsApp message (list or buttons)
+    Send interactive WhatsApp message (list, buttons, or flow)
     """
     headers = {
         "Authorization": f"Bearer {settings.WHATSAPP_TOKEN}",
@@ -180,8 +212,40 @@ def send_network_selection_menu(wa_id):
     
     return send_whatsapp_interactive_message(wa_id, message_data)
 
-def send_amount_selection_menu(wa_id, network):
-    """Send amount selection interactive list with preset amounts and custom option"""
+def send_amount_input_flow(wa_id, network):
+    """Send interactive flow for amount selection with custom input capability"""
+    
+    # Generate a unique flow token for this session
+    flow_token = f"amount_flow_{wa_id}_{int(time.time())}"
+    
+    # Create flow message with preset amounts and custom input
+    message_data = get_interactive_flow_message(
+        wa_id,
+        f"💰 {network.upper()} Amount Selection",
+        "Choose a preset amount or enter your custom amount:",
+        settings.WHATSAPP_FLOW_ID,  # Your WhatsApp Flow ID
+        flow_token,
+        "amount_selection_screen",
+        {
+            "network": network,
+            "preset_amounts": [
+                {"value": "100", "label": "₦100"},
+                {"value": "200", "label": "₦200"},
+                {"value": "500", "label": "₦500"},
+                {"value": "1000", "label": "₦1,000"},
+                {"value": "2000", "label": "₦2,000"},
+                {"value": "5000", "label": "₦5,000"}
+            ],
+            "min_amount": 50,
+            "max_amount": 50000,
+            "currency": "₦"
+        }
+    )
+    
+    return send_whatsapp_interactive_message(wa_id, message_data)
+
+def send_amount_selection_menu_fallback(wa_id, network):
+    """Fallback amount selection using regular list (if Flow is not available)"""
     list_items = [
         {"id": "100", "title": "₦100", "description": "One Hundred Naira"},
         {"id": "200", "title": "₦200", "description": "Two Hundred Naira"},
@@ -195,7 +259,7 @@ def send_amount_selection_menu(wa_id, network):
     message_data = get_interactive_list_message(
         wa_id,
         f"💰 {network.upper()} Amount Selection",
-        "Please select the recharge amount or choose 'Enter Custom Amount' to type your own:\n\n💡 *Custom amounts*: Just type any amount between ₦50 - ₦50,000",
+        "Please select the recharge amount or choose 'Enter Custom Amount':",
         "Select Amount",
         list_items
     )
@@ -256,33 +320,14 @@ def validate_custom_amount(amount_text):
         
         # Validate amount range
         if amount_value < 50:
-            return False, None, "❌ *Amount Too Low*\n\nMinimum recharge amount is ₦50.\n\nPlease enter a higher amount:"
+            return False, None, "❌ *Amount Too Low*\n\nMinimum recharge amount is ₦50."
         elif amount_value > 50000:
-            return False, None, "❌ *Amount Too High*\n\nMaximum recharge amount is ₦50,000.\n\nPlease enter a lower amount:"
+            return False, None, "❌ *Amount Too High*\n\nMaximum recharge amount is ₦50,000."
         else:
             return True, amount_value, None
             
     except (ValueError, TypeError):
-        return False, None, "❌ *Invalid Amount*\n\nPlease enter a valid number.\n\n_Examples: 150, 750, 1500_"
-
-def is_custom_amount_input(text):
-    """
-    Check if the text input looks like a custom amount
-    Returns True if it's likely a number input for amount
-    """
-    # Clean the input
-    clean_text = re.sub(r'[₦,\s]', '', text.strip())
-    
-    # Check if it's purely numeric or contains only valid amount characters
-    if re.match(r'^\d+(\.\d+)?$', clean_text):
-        try:
-            amount = int(float(clean_text))
-            # If it's a reasonable amount range, consider it a custom amount
-            return 10 <= amount <= 100000  # Broader range for detection
-        except:
-            return False
-    
-    return False
+        return False, None, "❌ *Invalid Amount*\n\nPlease enter a valid number."
 
 def generate_response(message_body, wa_id, message_type="text"):
     """
@@ -293,6 +338,9 @@ def generate_response(message_body, wa_id, message_type="text"):
         if message_type == "interactive":
             # Extract the selection from interactive message
             response = message_body  # This will be the ID from the selected option
+        elif message_type == "flow":
+            # Handle flow response
+            return handle_flow_response(message_body, wa_id)
         else:
             # Normalize text input
             response = message_body.strip().lower().replace("_", " ")
@@ -349,31 +397,29 @@ def generate_response(message_body, wa_id, message_type="text"):
                 user_state["step"] = "choose_amount"
                 set_user_state(wa_id, user_state)
                 
-                # Send amount selection menu
+                # Send interactive flow for amount selection
                 network = user_state["network"]
-                menu_result = send_amount_selection_menu(wa_id, network)
+                
+                # Try to send flow first, fallback to regular menu if flow fails
+                if hasattr(settings, 'WHATSAPP_FLOW_ID') and settings.WHATSAPP_FLOW_ID:
+                    flow_result = send_amount_input_flow(wa_id, network)
+                    if flow_result["status"] == "success":
+                        return None
+                
+                # Fallback to regular interactive menu
+                menu_result = send_amount_selection_menu_fallback(wa_id, network)
                 
                 if menu_result["status"] == "success":
                     return None  # Don't send additional text message
                 else:
-                    return f"💰 *Phone Number: {clean_phone}*\n\nSelect amount: ₦100, ₦200, ₦500, ₦1000, ₦2000, ₦5000, or type any custom amount (₦50-₦50,000)"
+                    return f"💰 *Phone Number: {clean_phone}*\n\nPlease type your desired recharge amount (₦50-₦50,000)\n\n_Examples: 100, 500, 1500_"
             else:
                 return "❗ *Invalid Phone Number*\n\nPlease enter a valid 11-digit Nigerian phone number starting with:\n• 070, 080, 081, 090, or 091\n\n_Example: 08012345678_"
 
-        # STEP 4: Choose Amount (Enhanced to handle direct amount input)
+        # STEP 4: Choose Amount (handles both flow and fallback responses)
         elif current_step == "choose_amount":
-            # Check if user selected "custom_amount" from interactive menu
-            if response == "custom_amount":
-                user_state["step"] = "awaiting_custom_amount"
-                set_user_state(wa_id, user_state)
-                return (f"💰 *Custom Amount Entry*\n\n"
-                       f"Please enter your desired recharge amount:\n\n"
-                       f"• Minimum: ₦50\n"
-                       f"• Maximum: ₦50,000\n\n"
-                       f"_Just type the amount (e.g., 150, 750, 1500)_")
-            
-            # Check if user selected a preset amount
-            elif response in preset_amounts:
+            # Handle preset amount selection from fallback menu
+            if response in preset_amounts:
                 user_state["amount"] = response
                 user_state["step"] = "confirm"
                 set_user_state(wa_id, user_state)
@@ -384,7 +430,7 @@ def generate_response(message_body, wa_id, message_type="text"):
                 button_result = send_confirmation_buttons(wa_id, network, phone, response)
                 
                 if button_result["status"] == "success":
-                    return None  # Don't send additional text message
+                    return None
                 else:
                     return (f"✅ *Please Confirm*\n\n"
                            f"Network: *{network.upper()}*\n"
@@ -392,8 +438,18 @@ def generate_response(message_body, wa_id, message_type="text"):
                            f"Amount: *₦{response}*\n\n"
                            f"Reply *YES* to confirm or *NO* to cancel.")
             
-            # NEW: Check if user directly typed a custom amount (instead of using menu)
-            elif message_type == "text" and is_custom_amount_input(message_body):
+            # Handle custom amount selection from fallback menu
+            elif response == "custom_amount":
+                user_state["step"] = "awaiting_custom_amount"
+                set_user_state(wa_id, user_state)
+                return (f"💰 *Custom Amount Entry*\n\n"
+                       f"Please enter your desired recharge amount:\n\n"
+                       f"• Minimum: ₦50\n"
+                       f"• Maximum: ₦50,000\n\n"
+                       f"_Just type the amount (e.g., 150, 750, 1500)_")
+            
+            # Handle direct amount input (text messages)
+            elif message_type == "text":
                 is_valid, amount_value, error_msg = validate_custom_amount(message_body)
                 
                 if is_valid:
@@ -407,7 +463,7 @@ def generate_response(message_body, wa_id, message_type="text"):
                     button_result = send_confirmation_buttons(wa_id, network, phone, str(amount_value))
                     
                     if button_result["status"] == "success":
-                        return None  # Don't send additional text message
+                        return None
                     else:
                         try:
                             formatted_amount = f"₦{amount_value:,}"
@@ -419,18 +475,11 @@ def generate_response(message_body, wa_id, message_type="text"):
                                f"Amount: *{formatted_amount}*\n\n"
                                f"Reply *YES* to confirm or *NO* to cancel.")
                 else:
-                    return error_msg + "\n\n💡 Or use the menu below:"
-            
+                    return error_msg
             else:
-                # Invalid selection - resend amount menu with helpful message
-                network = user_state.get("network", "")
-                menu_result = send_amount_selection_menu(wa_id, network)
-                if menu_result["status"] == "success":
-                    return "💡 *Tip*: You can either select from the menu above OR simply type any amount (e.g., 150, 750, 2500)"
-                else:
-                    return f"❌ Invalid selection. Please choose from the menu or type a custom amount (₦50-₦50,000)"
+                return "❌ Please select an amount from the menu or enter a custom amount."
 
-        # STEP 4B: Handle Custom Amount Input (when explicitly requested)
+        # STEP 4B: Handle Custom Amount Input (from fallback flow)
         elif current_step == "awaiting_custom_amount":
             is_valid, amount_value, error_msg = validate_custom_amount(message_body)
             
@@ -445,7 +494,7 @@ def generate_response(message_body, wa_id, message_type="text"):
                 button_result = send_confirmation_buttons(wa_id, network, phone, str(amount_value))
                 
                 if button_result["status"] == "success":
-                    return None  # Don't send additional text message
+                    return None
                 else:
                     try:
                         formatted_amount = f"₦{amount_value:,}"
@@ -528,6 +577,59 @@ def generate_response(message_body, wa_id, message_type="text"):
         clear_user_state(wa_id)
         return "⚠️ *System Error*\n\nSorry, something went wrong. Please type *welcome* to try again."
 
+def handle_flow_response(flow_data, wa_id):
+    """
+    Handle responses from WhatsApp Flow (interactive form submissions)
+    """
+    try:
+        # Extract flow response data
+        flow_response = json.loads(flow_data) if isinstance(flow_data, str) else flow_data
+        
+        # Get user state
+        user_state = get_user_state(wa_id)
+        
+        # Extract the amount from flow response
+        amount = flow_response.get("amount")
+        selected_preset = flow_response.get("preset_amount")
+        
+        # Use preset amount if selected, otherwise use custom amount
+        final_amount = selected_preset if selected_preset else amount
+        
+        if final_amount:
+            # Validate the amount
+            is_valid, amount_value, error_msg = validate_custom_amount(str(final_amount))
+            
+            if is_valid:
+                user_state["amount"] = str(amount_value)
+                user_state["step"] = "confirm"
+                set_user_state(wa_id, user_state)
+                
+                # Send confirmation buttons
+                network = user_state.get("network", "Unknown")
+                phone = user_state.get("phone", "Unknown")
+                button_result = send_confirmation_buttons(wa_id, network, phone, str(amount_value))
+                
+                if button_result["status"] == "success":
+                    return None
+                else:
+                    try:
+                        formatted_amount = f"₦{amount_value:,}"
+                    except:
+                        formatted_amount = f"₦{amount_value}"
+                    return (f"✅ *Please Confirm*\n\n"
+                           f"Network: *{network.upper()}*\n"
+                           f"Phone: *{phone}*\n"
+                           f"Amount: *{formatted_amount}*\n\n"
+                           f"Reply *YES* to confirm or *NO* to cancel.")
+            else:
+                return error_msg
+        else:
+            return "❌ No amount was provided. Please try again."
+            
+    except Exception as e:
+        logger.error(f"Error handling flow response: {str(e)}")
+        return "❌ Error processing your input. Please try again."
+
 def process_text_for_whatsapp(text):
     """
     Process text for WhatsApp formatting
@@ -590,7 +692,7 @@ def extract_message_data(body):
             return wa_id, name, message_body, "text"
             
         elif message_type == "interactive":
-            # Handle interactive message responses (list/button selections)
+            # Handle interactive message responses (list/button/flow selections)
             interactive = message["interactive"]
             interactive_type = interactive.get("type")
             
@@ -603,6 +705,11 @@ def extract_message_data(body):
                 # User clicked a button
                 message_body = interactive["button_reply"]["id"]  # Get the button ID
                 return wa_id, name, message_body, "interactive"
+                
+            elif interactive_type == "nfm_reply":
+                # User submitted a flow (New Flow Message)
+                message_body = interactive["nfm_reply"]["response_json"]
+                return wa_id, name, message_body, "flow"
                 
         elif message_type == "button":
             # Legacy button response (for older button format)
@@ -657,9 +764,11 @@ def process_whatsapp_message(body):
             result = send_whatsapp_message(wa_id, response_text)
             return {"status": "unsupported_message", "wa_id": wa_id}
         
-        # Log the message (different for interactive vs text)
+        # Log the message (different for interactive vs text vs flow)
         if message_type == "interactive":
             logger.info(f"Received interactive selection from {name} ({wa_id}): {message_body}")
+        elif message_type == "flow":
+            logger.info(f"Received flow response from {name} ({wa_id}): {message_body}")
         else:
             logger.info(f"Received text message from {name} ({wa_id}): {message_body}")
         
@@ -731,6 +840,7 @@ def verify_webhook(request):
             "status": "error", 
             "message": "Missing parameters"
         }, status=400)
+
 def handle_message(request):
     """
     Handle incoming webhook messages (POST request)
@@ -793,13 +903,14 @@ def handle_message(request):
             "message": "Internal server error"
         }, status=500)
 
+
 # Test function for development
 def test_send_message():
     """
     Test function to send a WhatsApp message
     """
     phone_number = "2349126709734"  # Replace with test number
-    message = "🤖 *WhatsApp Bot Test*\n\nHello! This is a test message from the improved WhatsApp bot.\n\nType *welcome* to start using the airtime recharge service."
+    message = "🤖 *WhatsApp Bot Test*\n\nHello! This is a test message from the improved WhatsApp bot with Flow support.\n\nType *welcome* to start using the airtime recharge service."
     
     result = send_whatsapp_message(phone_number, message)
     
@@ -808,6 +919,48 @@ def test_send_message():
         return True
     else:
         print(f"❌ Failed to send test message: {result.get('error', 'Unknown error')}")
+        return False
+
+def test_flow_message():
+    """
+    Test function to send a flow message
+    """
+    phone_number = "2349126709734"  # Replace with test number
+    
+    # This would require a configured Flow ID in your settings
+    if hasattr(settings, 'WHATSAPP_FLOW_ID') and settings.WHATSAPP_FLOW_ID:
+        flow_token = f"test_flow_{int(time.time())}"
+        
+        message_data = get_interactive_flow_message(
+            phone_number,
+            "💰 Test Amount Selection",
+            "This is a test of the interactive flow for amount input:",
+            settings.WHATSAPP_FLOW_ID,
+            flow_token,
+            "amount_selection_screen",
+            {
+                "network": "mtn",
+                "preset_amounts": [
+                    {"value": "100", "label": "₦100"},
+                    {"value": "500", "label": "₦500"},
+                    {"value": "1000", "label": "₦1,000"}
+                ],
+                "min_amount": 50,
+                "max_amount": 50000,
+                "currency": "₦"
+            }
+        )
+        
+        result = send_whatsapp_interactive_message(phone_number, message_data)
+        
+        if result.get("status") == "success":
+            print("✅ Test flow message sent successfully!")
+            return True
+        else:
+            print(f"❌ Failed to send test flow message: {result.get('error', 'Unknown error')}")
+            return False
+    else:
+        print("❌ WHATSAPP_FLOW_ID not configured in settings")
         return False
 
 if __name__ == "__main__":
@@ -819,3 +972,6 @@ if __name__ == "__main__":
     
     logger.info("Starting WhatsApp Bot test...")
     test_send_message()
+    
+    # Uncomment to test flow functionality
+    # test_flow_message()

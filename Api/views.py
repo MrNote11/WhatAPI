@@ -70,6 +70,67 @@ class FacebookWebhookView(APIView):
         return handle_message(request)
 
 
+# Flow endpoint for handling Flow interactions
+@csrf_exempt  
+@require_http_methods(["POST"])
+def flow_endpoint(request):
+    """
+    Handle WhatsApp Flow interactions and validations
+    """
+    try:
+        # Parse the request body
+        body = json.loads(request.body.decode("utf-8"))
+        
+        # Extract flow data
+        flow_token = body.get("flow_token", "")
+        screen = body.get("screen", "")
+        data = body.get("data", {})
+        action = body.get("action", "")
+        
+        logger.info(f"Flow interaction: screen={screen}, action={action}")
+        
+        if screen == "amount_selection_screen":
+            if action == "data_exchange":
+                # Return the flow screen configuration
+                return JsonResponse({
+                    "version": "3.0",
+                    "screen": "amount_selection_screen",
+                    "data": {
+                        "preset_amounts": [
+                            {"value": "100", "label": "₦100"},
+                            {"value": "200", "label": "₦200"},
+                            {"value": "500", "label": "₦500"},
+                            {"value": "1000", "label": "₦1,000"},
+                            {"value": "2000", "label": "₦2,000"},
+                            {"value": "5000", "label": "₦5,000"}
+                        ],
+                        "min_amount": 50,
+                        "max_amount": 50000,
+                        "currency": "₦",
+                        "network": data.get("network", "")
+                    }
+                })
+            elif action == "INIT":
+                # Initialize the flow
+                return JsonResponse({
+                    "version": "3.0",
+                    "screen": "amount_selection_screen",
+                    "data": data
+                })
+        
+        # Default response for unknown actions
+        return JsonResponse({
+            "version": "3.0",
+            "screen": screen,
+            "data": data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in flow endpoint: {str(e)}")
+        return JsonResponse({
+            "error": "Internal server error"
+        }, status=500)
+
     # def post(self, request):
     #     # Handle incoming messages here
     #     data1 = request.body
