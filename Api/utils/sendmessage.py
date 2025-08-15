@@ -181,7 +181,7 @@ def send_network_selection_menu(wa_id):
     return send_whatsapp_interactive_message(wa_id, message_data)
 
 def send_amount_selection_menu(wa_id, network):
-    """Send amount selection interactive list with custom amount option"""
+    """Send amount selection interactive list with preset amounts and custom option"""
     list_items = [
         {"id": "100", "title": "₦100", "description": "One Hundred Naira"},
         {"id": "200", "title": "₦200", "description": "Two Hundred Naira"},
@@ -189,13 +189,13 @@ def send_amount_selection_menu(wa_id, network):
         {"id": "1000", "title": "₦1000", "description": "One Thousand Naira"},
         {"id": "2000", "title": "₦2000", "description": "Two Thousand Naira"},
         {"id": "5000", "title": "₦5000", "description": "Five Thousand Naira"},
-        {"id": "custom", "title": "💬 Custom Amount", "description": "Enter your own amount"}
+        {"id": "custom_amount", "title": "💬 Enter Custom Amount", "description": "Type your own amount (₦50 - ₦50,000)"}
     ]
     
     message_data = get_interactive_list_message(
         wa_id,
         f"💰 {network.upper()} Amount Selection",
-        "Please select the recharge amount or choose custom to enter your own:",
+        "Please select the recharge amount or choose 'Enter Custom Amount' to type your own:\n\n💡 *Custom amounts*: Just type any amount between ₦50 - ₦50,000",
         "Select Amount",
         list_items
     )
@@ -221,16 +221,68 @@ def send_confirmation_buttons(wa_id, network, phone, amount):
         }
     ]
     
+    # Format amount with commas for display
+    try:
+        formatted_amount = f"₦{int(amount):,}"
+    except:
+        formatted_amount = f"₦{amount}"
+    
     confirmation_text = (
         f"🔍 *Please Confirm Your Recharge*\n\n"
         f"📡 Network: *{network.upper()}*\n"
         f"📱 Phone Number: *{phone}*\n" 
-        f"💰 Amount: *₦{amount}*\n\n"
+        f"💰 Amount: *{formatted_amount}*\n\n"
         f"Do you want to proceed with this recharge?"
     )
     
     message_data = get_interactive_button_message(wa_id, confirmation_text, buttons)
     return send_whatsapp_interactive_message(wa_id, message_data)
+
+def validate_custom_amount(amount_text):
+    """
+    Validate and parse custom amount input
+    Returns tuple: (is_valid, amount_value, error_message)
+    """
+    try:
+        # Clean the input - remove currency symbols, commas, spaces
+        clean_amount = re.sub(r'[₦,\s]', '', amount_text.strip())
+        
+        # Check if it's a valid number
+        if not clean_amount.replace('.', '').isdigit():
+            return False, None, "❌ *Invalid Input*\n\nPlease enter numbers only.\n\n_Examples: 150, 750, 1500_"
+        
+        # Convert to integer (ignore decimal places for airtime)
+        amount_value = int(float(clean_amount))
+        
+        # Validate amount range
+        if amount_value < 50:
+            return False, None, "❌ *Amount Too Low*\n\nMinimum recharge amount is ₦50.\n\nPlease enter a higher amount:"
+        elif amount_value > 50000:
+            return False, None, "❌ *Amount Too High*\n\nMaximum recharge amount is ₦50,000.\n\nPlease enter a lower amount:"
+        else:
+            return True, amount_value, None
+            
+    except (ValueError, TypeError):
+        return False, None, "❌ *Invalid Amount*\n\nPlease enter a valid number.\n\n_Examples: 150, 750, 1500_"
+
+def is_custom_amount_input(text):
+    """
+    Check if the text input looks like a custom amount
+    Returns True if it's likely a number input for amount
+    """
+    # Clean the input
+    clean_text = re.sub(r'[₦,\s]', '', text.strip())
+    
+    # Check if it's purely numeric or contains only valid amount characters
+    if re.match(r'^\d+(\.\d+)?$', clean_text):
+        try:
+            amount = int(float(clean_text))
+            # If it's a reasonable amount range, consider it a custom amount
+            return 10 <= amount <= 100000  # Broader range for detection
+        except:
+            return False
+    
+    return False
 
 def generate_response(message_body, wa_id, message_type="text"):
     """
@@ -304,14 +356,24 @@ def generate_response(message_body, wa_id, message_type="text"):
                 if menu_result["status"] == "success":
                     return None  # Don't send additional text message
                 else:
-                    return f"💰 *Phone Number: {clean_phone}*\n\nSelect amount: ₦100, ₦200, ₦500, ₦1000, ₦2000, ₦5000, or type 'custom' for your own amount"
+                    return f"💰 *Phone Number: {clean_phone}*\n\nSelect amount: ₦100, ₦200, ₦500, ₦1000, ₦2000, ₦5000, or type any custom amount (₦50-₦50,000)"
             else:
                 return "❗ *Invalid Phone Number*\n\nPlease enter a valid 11-digit Nigerian phone number starting with:\n• 070, 080, 081, 090, or 091\n\n_Example: 08012345678_"
 
-        # STEP 4: Choose Amount
+        # STEP 4: Choose Amount (Enhanced to handle direct amount input)
         elif current_step == "choose_amount":
-            # Handle preset amount selection
-            if response in preset_amounts:
+            # Check if user selected "custom_amount" from interactive menu
+            if response == "custom_amount":
+                user_state["step"] = "awaiting_custom_amount"
+                set_user_state(wa_id, user_state)
+                return (f"💰 *Custom Amount Entry*\n\n"
+                       f"Please enter your desired recharge amount:\n\n"
+                       f"• Minimum: ₦50\n"
+                       f"• Maximum: ₦50,000\n\n"
+                       f"_Just type the amount (e.g., 150, 750, 1500)_")
+            
+            # Check if user selected a preset amount
+            elif response in preset_amounts:
                 user_state["amount"] = response
                 user_state["step"] = "confirm"
                 set_user_state(wa_id, user_state)
@@ -329,46 +391,12 @@ def generate_response(message_body, wa_id, message_type="text"):
                            f"Phone: *{phone}*\n"
                            f"Amount: *₦{response}*\n\n"
                            f"Reply *YES* to confirm or *NO* to cancel.")
-                           
-            # Handle custom amount selection
-            elif response == "custom":
-                user_state["step"] = "custom_amount"
-                set_user_state(wa_id, user_state)
-                return (f"💰 *Custom Amount Entry*\n\n"
-                       f"Please enter your desired recharge amount:\n\n"
-                       f"• Minimum: ₦50\n"
-                       f"• Maximum: ₦50,000\n"
-                       f"• Enter numbers only (e.g., 150, 750, 1500)\n\n"
-                       f"_Type the amount without ₦ symbol_")
-            else:
-                # Resend amount menu
-                network = user_state.get("network", "")
-                menu_result = send_amount_selection_menu(wa_id, network)
-                if menu_result["status"] == "success":
-                    return None
-                else:
-                    return f"❌ Invalid amount. Please choose from the menu or select 'Custom Amount' to enter your own."
-
-        # STEP 4B: Handle Custom Amount Input
-        elif current_step == "custom_amount":
-            # Validate custom amount
-            try:
-                # Clean the input - remove any currency symbols, commas, spaces
-                clean_amount = re.sub(r'[₦,\s]', '', response)
+            
+            # NEW: Check if user directly typed a custom amount (instead of using menu)
+            elif message_type == "text" and is_custom_amount_input(message_body):
+                is_valid, amount_value, error_msg = validate_custom_amount(message_body)
                 
-                # Check if it's a valid number
-                if not clean_amount.isdigit():
-                    return "❌ *Invalid Input*\n\nPlease enter numbers only.\n\n_Example: 150, 750, 1500_\n\nEnter your desired amount:"
-                
-                amount_value = int(clean_amount)
-                
-                # Validate amount range
-                if amount_value < 50:
-                    return "❌ *Amount Too Low*\n\nMinimum recharge amount is ₦50.\n\nPlease enter a higher amount:"
-                elif amount_value > 50000:
-                    return "❌ *Amount Too High*\n\nMaximum recharge amount is ₦50,000.\n\nPlease enter a lower amount:"
-                else:
-                    # Valid custom amount
+                if is_valid:
                     user_state["amount"] = str(amount_value)
                     user_state["step"] = "confirm"
                     set_user_state(wa_id, user_state)
@@ -381,14 +409,55 @@ def generate_response(message_body, wa_id, message_type="text"):
                     if button_result["status"] == "success":
                         return None  # Don't send additional text message
                     else:
+                        try:
+                            formatted_amount = f"₦{amount_value:,}"
+                        except:
+                            formatted_amount = f"₦{amount_value}"
                         return (f"✅ *Please Confirm*\n\n"
                                f"Network: *{network.upper()}*\n"
                                f"Phone: *{phone}*\n"
-                               f"Amount: *₦{amount_value:,}*\n\n"
+                               f"Amount: *{formatted_amount}*\n\n"
                                f"Reply *YES* to confirm or *NO* to cancel.")
-                        
-            except ValueError:
-                return "❌ *Invalid Amount*\n\nPlease enter a valid number.\n\n_Example: 150, 750, 1500_\n\nEnter your desired amount:"
+                else:
+                    return error_msg + "\n\n💡 Or use the menu below:"
+            
+            else:
+                # Invalid selection - resend amount menu with helpful message
+                network = user_state.get("network", "")
+                menu_result = send_amount_selection_menu(wa_id, network)
+                if menu_result["status"] == "success":
+                    return "💡 *Tip*: You can either select from the menu above OR simply type any amount (e.g., 150, 750, 2500)"
+                else:
+                    return f"❌ Invalid selection. Please choose from the menu or type a custom amount (₦50-₦50,000)"
+
+        # STEP 4B: Handle Custom Amount Input (when explicitly requested)
+        elif current_step == "awaiting_custom_amount":
+            is_valid, amount_value, error_msg = validate_custom_amount(message_body)
+            
+            if is_valid:
+                user_state["amount"] = str(amount_value)
+                user_state["step"] = "confirm"
+                set_user_state(wa_id, user_state)
+                
+                # Send confirmation buttons
+                network = user_state["network"]
+                phone = user_state["phone"]
+                button_result = send_confirmation_buttons(wa_id, network, phone, str(amount_value))
+                
+                if button_result["status"] == "success":
+                    return None  # Don't send additional text message
+                else:
+                    try:
+                        formatted_amount = f"₦{amount_value:,}"
+                    except:
+                        formatted_amount = f"₦{amount_value}"
+                    return (f"✅ *Please Confirm*\n\n"
+                           f"Network: *{network.upper()}*\n"
+                           f"Phone: *{phone}*\n"
+                           f"Amount: *{formatted_amount}*\n\n"
+                           f"Reply *YES* to confirm or *NO* to cancel.")
+            else:
+                return error_msg
 
         # STEP 5: Confirmation
         elif current_step == "confirm":
@@ -662,7 +731,6 @@ def verify_webhook(request):
             "status": "error", 
             "message": "Missing parameters"
         }, status=400)
-
 def handle_message(request):
     """
     Handle incoming webhook messages (POST request)
